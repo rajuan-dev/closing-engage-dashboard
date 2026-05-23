@@ -107,7 +107,10 @@ export const ordersApi = {
     });
   },
 
-  assignNotary(id: string, payload: { notaryName: string; notaryId?: string; notaryEmail?: string }): Promise<OrderRow> {
+  assignNotary(
+    id: string,
+    payload: { notaryName?: string; notaryId?: string; notaryEmail?: string; openForAll?: boolean },
+  ): Promise<OrderRow> {
     return request<OrderRow>(`${orderPath(id)}/assign-notary`, {
       method: "PATCH",
       body: JSON.stringify(payload),

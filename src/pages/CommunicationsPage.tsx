@@ -112,7 +112,9 @@ export function CommunicationsPage({
   }, [orderDetailsById, orders, searchQuery, threads]);
 
   const selectedRow = rows.find((row) => row.id === selectedOrderId) || rows[0];
-  const selectedHasNotary = Boolean(selectedRow?.notary && selectedRow.notary !== "Unassigned");
+  const selectedHasNotary = Boolean(
+    selectedRow?.notary && selectedRow.notary !== "Unassigned" && selectedRow.notary !== "Open for All",
+  );
   const activeConversationCount = threads.length;
 
   useEffect(() => {
@@ -379,7 +381,9 @@ export function CommunicationsPage({
                       </div>
                       <div className="mt-2 flex items-center gap-2 text-[11px] font-semibold text-slate-400">
                         <UserRound size={14} className="text-brand-500" />
-                        <span className={row.notary === "Unassigned" ? "text-amber-600" : ""}>{row.notary}</span>
+                        <span className={row.notary === "Unassigned" || row.notary === "Open for All" ? "text-amber-600" : ""}>
+                          {row.notary}
+                        </span>
                       </div>
                       <div className="mt-2 rounded-2xl bg-[#f8fbff] px-3 py-2.5 text-[12px] leading-5 text-slate-600">
                         <span className="line-clamp-2">{lastMessage}</span>

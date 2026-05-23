@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, X, ShieldCheck } from "lucide-react";
+import { Search, X, ShieldCheck, Circle } from "lucide-react";
 import { useAppContext } from "../../context/AppContext";
 import { ordersApi } from "../../api/orders";
 import { usersApi } from "../../api/users";
@@ -14,6 +14,7 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
+  const [assignMode, setAssignMode] = useState<"single" | "open">("single");
   
   const order = orders.find((o: any) => o[0] === orderId) || orders[0];
   const orderNum = order ? order[0] : "#ORD-90212";
@@ -33,8 +34,10 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
         setAvailableNotaries(rows);
 
         const currentAssignedName = order && order[3] !== "Unassigned" ? order[3] : "";
+        const currentMode = currentAssignedName === "Open for All" ? "open" : "single";
         const currentAssigned = rows.find((notary) => notary.fullName === currentAssignedName);
         const firstAssignable = rows.find((notary) => notary.status !== "Inactive");
+        setAssignMode(currentMode);
         setSelectedNotaryId(currentAssigned?.id || firstAssignable?.id || "");
       } catch (loadError) {
         if (!isMounted) return;
@@ -65,7 +68,7 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
       return;
     }
     const selectedNotary = availableNotaries.find((notary) => notary.id === selectedNotaryId);
-    if (!selectedNotary) {
+    if (assignMode === "single" && !selectedNotary) {
       setError("Select a real notary user account before assigning.");
       return;
     }
@@ -73,11 +76,16 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
     try {
       setIsAssigning(true);
       setError("");
-      const updatedOrder = await ordersApi.assignNotary(orderId, {
-        notaryName: selectedNotary.fullName,
-        notaryId: selectedNotary.id,
-        notaryEmail: selectedNotary.email,
-      });
+      const updatedOrder = await ordersApi.assignNotary(
+        orderId,
+        assignMode === "open"
+          ? { openForAll: true }
+          : {
+              notaryName: selectedNotary?.fullName,
+              notaryId: selectedNotary?.id,
+              notaryEmail: selectedNotary?.email,
+            },
+      );
       setOrders((prev: any) => prev.map((o: any) => (o[0] === orderId ? updatedOrder : o)));
       onClose();
     } catch (assignError) {
@@ -107,12 +115,51 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
         </div>
       </div>
       <div className="mt-7">
+        <div className="rounded-2xl border border-[#E5EBF6] bg-white p-4">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => setAssignMode("open")}
+              className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border transition ${
+                assignMode === "open" ? "border-brand-500 bg-brand-500 text-white" : "border-[#CBD5E1] text-transparent"
+              }`}
+            >
+              <Circle size={12} fill="currentColor" />
+            </button>
+            <div className="flex-1">
+              <div className="text-[15px] font-semibold text-slate-900">Open for all notaries</div>
+              <div className="mt-1 text-[13px] leading-5 text-slate-500">
+                Broadcast this order to every active notary. The first notary who accepts will be assigned automatically.
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => setAssignMode("single")}
+              className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border transition ${
+                assignMode === "single" ? "border-brand-500 bg-brand-500 text-white" : "border-[#CBD5E1] text-transparent"
+              }`}
+            >
+              <Circle size={12} fill="currentColor" />
+            </button>
+            <div className="flex-1">
+              <div className="text-[15px] font-semibold text-slate-900">Assign a specific notary</div>
+              <div className="mt-1 text-[13px] leading-5 text-slate-500">
+                Pick one notary below when you already know exactly who should handle this file.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-5">
         <label className="flex h-11 items-center gap-3 rounded-xl bg-[#EEF3FA] px-4 text-slate-400">
           <Search size={16} />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by name or location..."
+            disabled={assignMode === "open"}
             className="w-full border-0 bg-transparent text-[14px] text-slate-700 outline-none placeholder:text-slate-400"
           />
         </label>
@@ -125,6 +172,10 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
         ) : error ? (
           <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-[14px] font-semibold text-red-600">
             {error}
+          </div>
+        ) : assignMode === "open" ? (
+          <div className="rounded-2xl border border-[#D9E7FF] bg-[#F5F9FF] p-5 text-[14px] font-semibold leading-6 text-brand-600">
+            This order will be sent to every active notary notification inbox. Once one notary accepts it, everyone else will be blocked automatically.
           </div>
         ) : visibleNotaries.length === 0 ? (
           <div className="rounded-2xl border border-[#E5EBF6] bg-white p-6 text-center text-[15px] font-semibold text-slate-500">
@@ -170,10 +221,10 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
       <div className="mt-10 grid grid-cols-2 gap-4">
         <button
           onClick={handleAssign}
-          disabled={isLoading || isAssigning || !selectedNotaryId}
+          disabled={isLoading || isAssigning || (assignMode === "single" && !selectedNotaryId)}
           className="rounded-xl bg-brand-500 py-4 text-[16px] font-semibold text-white shadow-md hover:bg-brand-600 transition disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isAssigning ? "Assigning..." : "Assign Notary"}
+          {isAssigning ? "Saving..." : assignMode === "open" ? "Open for All" : "Assign Notary"}
         </button>
         <button
           onClick={onClose}

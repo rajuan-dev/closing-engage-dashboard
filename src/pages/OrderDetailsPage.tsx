@@ -96,6 +96,7 @@ export function OrderDetailsPage({
   if (!activeOrder) return null;
 
   const [id, company, , notaryName, location, date, status, avatar] = activeOrder;
+  const isOpenForAll = notaryName === "Open for All";
   const normalizedNotaryName = notaryName.trim().toLowerCase();
   const allScanbackDocuments = documents.filter((document) => {
     if (document.uploaderRole === "notary") return true;
@@ -481,12 +482,14 @@ export function OrderDetailsPage({
             <div className="p-5">
               {avatar === "none" ? (
                 <div className="text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  <p className="text-[14px] text-slate-500 font-medium">No notary assigned to this order yet.</p>
+                  <p className="text-[14px] text-slate-500 font-medium">
+                    {isOpenForAll ? "This order is open to all notaries until the first one accepts it." : "No notary assigned to this order yet."}
+                  </p>
                   <button
                     onClick={onAssign}
                     className="mt-2 text-[13px] font-semibold text-brand-600 hover:text-brand-700 transition"
                   >
-                    + Assign a Professional Notary Now
+                    {isOpenForAll ? "Manage broadcast assignment" : "+ Assign a Professional Notary Now"}
                   </button>
                 </div>
               ) : (
@@ -777,7 +780,7 @@ export function OrderDetailsPage({
                     }}
                     rows={1}
                     maxLength={4000}
-                    placeholder={avatar === "none" ? "Assign a notary before sending..." : "Message the notary..."}
+                    placeholder={avatar === "none" ? (isOpenForAll ? "Wait for a notary to accept before messaging..." : "Assign a notary before sending...") : "Message the notary..."}
                     disabled={avatar === "none"}
                     className="max-h-24 min-h-[42px] flex-1 resize-none bg-transparent px-3 py-2.5 text-[13px] text-slate-800 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
                   />

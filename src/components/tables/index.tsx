@@ -290,6 +290,7 @@ export function OrderTable({
         <tbody>
           {paginatedRows.map(([id, company, companyInitials, notary, location, date, status, avatar]) => {
             const isUnassigned = avatar === "none" || !notary || notary === "Unassigned";
+            const isOpenForAll = notary === "Open for All";
             const assignedNotary = isUnassigned
               ? undefined
               : notaries.find((entry) => entry.fullName.toLowerCase() === notary.toLowerCase());
@@ -315,7 +316,13 @@ export function OrderTable({
                 </td>
                 <td className="px-5 py-5">
                   {isUnassigned ? (
-                    <div className="text-[14px] italic text-slate-400">Unassigned</div>
+                    isOpenForAll ? (
+                      <div className="inline-flex rounded-full bg-[#EEF5FF] px-3 py-1 text-[12px] font-semibold text-brand-600">
+                        Open for All
+                      </div>
+                    ) : (
+                      <div className="text-[14px] italic text-slate-400">Unassigned</div>
+                    )
                   ) : (
                     <div className="flex items-center gap-3">
                       <Avatar
