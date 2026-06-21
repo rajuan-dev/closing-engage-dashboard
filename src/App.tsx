@@ -467,7 +467,10 @@ export default function App() {
                 {page === "orderDetails" && (
                   <OrderDetailsPage
                     orderId={selectedOrderId}
-                    onBack={() => setPage(orderDetailsBackPage)}
+                    onBack={() => {
+                      setSelectedOrderId(null);
+                      setPage(orderDetailsBackPage);
+                    }}
                     onAssign={() => setAssignModalOpen(true)}
                   />
                 )}
