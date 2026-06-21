@@ -59,6 +59,7 @@ export function OrderDetailsPage({
   const [documentError, setDocumentError] = useState("");
   const [rejectNote, setRejectNote] = useState("");
   const [selectedScanback, setSelectedScanback] = useState<DocumentDetail | null>(null);
+  const [rejectSource, setRejectSource] = useState<"pending" | "approved" | null>(null);
   const [isUpdatingScanbackId, setIsUpdatingScanbackId] = useState<string | null>(null);
   const [chatConversation, setChatConversation] = useState<CommunicationConversation | null>(null);
   const [chatDraft, setChatDraft] = useState("");
@@ -107,7 +108,7 @@ export function OrderDetailsPage({
     (document) => document.status === "Approved" || document.status === "Verified",
   );
   const reviewableScanbackDocuments = allScanbackDocuments.filter(
-    (document) => document.status !== "Rejected" && document.status !== "Approved" && document.status !== "Verified",
+    (document) => document.status !== "Approved" && document.status !== "Verified",
   );
   const scanbackDocumentIds = new Set(allScanbackDocuments.map((document) => document.id));
   const titleDocuments = documents.filter((document) => !scanbackDocumentIds.has(document.id));
@@ -281,11 +282,15 @@ export function OrderDetailsPage({
   };
 
   const isPendingScanback = (document: DocumentDetail) =>
-    document.status !== "Rejected" && document.status !== "Approved" && document.status !== "Verified";
+    document.status !== "Approved" && document.status !== "Verified";
 
   const handleReject = () => {
     if (!selectedScanback) return;
-    const comments = rejectNote.trim() || "Rejected by admin. Please review and upload a corrected scanback.";
+    const comments =
+      rejectNote.trim() ||
+      (rejectSource === "approved"
+        ? "Rejected by admin. Please correct the scanback and submit it again."
+        : "Rejected by admin. Please review and upload a corrected scanback.");
     setIsUpdatingScanbackId(selectedScanback.id);
     void documentsApi
       .updateStatusDetail(selectedScanback.id, "Rejected", comments)
@@ -293,18 +298,32 @@ export function OrderDetailsPage({
         setDocuments((prev) =>
           prev.map((document) => (document.id === selectedScanback.id ? updatedDocument : document)),
         );
-        return ordersApi.updateStatus(id, "Rejected");
+        return ordersApi.updateStatus(id, rejectSource === "approved" ? "Under Review" : "Rejected");
       })
       .then((updatedOrder) => {
         setOrders((prev: any) => prev.map((o: any) => (o[0] === id ? updatedOrder : o)));
         setActivityLogs((prev) => [
-          { title: `Scanback Rejected by Admin: ${selectedScanback.fileName}`, date: "Just now", tone: "red" },
+          {
+            title:
+              rejectSource === "approved"
+                ? `Approved scanback rejected by Admin: ${selectedScanback.fileName}`
+                : `Scanback Rejected by Admin: ${selectedScanback.fileName}`,
+            date: "Just now",
+            tone: "red",
+          },
           ...prev,
         ]);
         setShowRejectModal(false);
         setRejectNote("");
         setSelectedScanback(null);
-        showToast("Scanback Rejected", { message: "The scanback document was marked as rejected.", variant: "error" });
+        setRejectSource(null);
+        showToast("Scanback Rejected", {
+          message:
+            rejectSource === "approved"
+              ? "The approved scanback was moved back to review."
+              : "The scanback document was marked as rejected.",
+          variant: "error",
+        });
       })
       .catch((error) => {
         showToast("Rejection Failed", {
@@ -348,6 +367,13 @@ export function OrderDetailsPage({
         });
       })
       .finally(() => setIsUpdatingScanbackId(null));
+  };
+
+  const openRejectModal = (scanback: DocumentDetail, source: "pending" | "approved") => {
+    setSelectedScanback(scanback);
+    setRejectSource(source);
+    setRejectNote("");
+    setShowRejectModal(true);
   };
 
   const sendChatMessage = () => {
@@ -610,6 +636,19 @@ export function OrderDetailsPage({
                         <div className="text-[13px] text-slate-500 font-medium mt-0.5">
                           {scanback.size} • Uploaded on {scanback.uploadDate}
                         </div>
+                        {scanback.status !== "Pending Review" ? (
+                          <div className="mt-2">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${
+                                scanback.status === "Rejected"
+                                  ? "bg-[#FDE8E7] text-[#D25753]"
+                                  : "bg-brand-50 text-brand-600"
+                              }`}
+                            >
+                              {scanback.status}
+                            </span>
+                          </div>
+                        ) : null}
                         <div className="mt-2.5 flex items-center gap-2">
                           <button
                             onClick={() => openPreview(scanback)}
@@ -631,8 +670,7 @@ export function OrderDetailsPage({
                     <div className="mt-5 grid grid-cols-2 gap-3">
                       <button
                         onClick={() => {
-                          setSelectedScanback(scanback);
-                          setShowRejectModal(true);
+                          openRejectModal(scanback, "pending");
                         }}
                         disabled={isUpdatingThisScanback}
                         className="rounded-lg border border-[#EA8D8C] py-3 text-[14px] font-semibold text-[#D94A45] transition hover:bg-rose-50 focus:outline-none disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
@@ -697,6 +735,13 @@ export function OrderDetailsPage({
                           >
                             <Download size={14} className="text-slate-550 text-slate-500" />
                             Download
+                          </button>
+                          <button
+                            onClick={() => openRejectModal(document, "approved")}
+                            disabled={isUpdatingScanbackId === document.id}
+                            className="flex items-center gap-1.5 rounded-lg border border-[#EA8D8C] bg-white px-3 py-1.5 text-[12px] font-bold text-[#D94A45] shadow-sm hover:bg-rose-50 transition focus:outline-none disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            {isUpdatingScanbackId === document.id ? "Updating..." : "Reject"}
                           </button>
                         </div>
                       </div>
@@ -807,7 +852,10 @@ export function OrderDetailsPage({
               <div>
                 <h2 className="text-[20px] font-bold text-slate-900">Reject Notary Scanback</h2>
                 <p className="text-[14px] text-slate-500 mt-1">
-                  Are you sure you want to reject {selectedScanback ? `"${selectedScanback.fileName}"` : "this document"}? This will update the order status to Rejected.
+                  Are you sure you want to reject {selectedScanback ? `"${selectedScanback.fileName}"` : "this document"}?{" "}
+                  {rejectSource === "approved"
+                    ? "This will move the document back to the Notary Scanbacks list and return the order to Under Review."
+                    : "This will update the order status to Rejected."}
                 </p>
               </div>
               <button onClick={() => setShowRejectModal(false)} className="text-slate-400 hover:text-slate-650 focus:outline-none">
