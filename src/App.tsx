@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import {
   orderRows as initialOrderRows,
@@ -33,6 +33,23 @@ import {
 } from "./pages";
 
 type UserModalMode = "company" | "notary";
+
+function PageSlot({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={active ? "block" : "hidden"}
+      aria-hidden={!active}
+    >
+      {children}
+    </section>
+  );
+}
 
 export default function App() {
   const defaultAdminProfile: AdminProfile = {
@@ -380,7 +397,7 @@ export default function App() {
           <main className="ml-0 lg:ml-[220px] pt-[68px]">
             <div className="px-4 py-4">
               <div className="w-full max-w-none">
-                {page === "dashboard" && (
+                <PageSlot active={page === "dashboard"}>
                   <DashboardPage
                     onQuickUser={() => openUserModal("company")}
                     onAssignOrder={() => {
@@ -392,8 +409,8 @@ export default function App() {
                       setPage("orders");
                     }}
                   />
-                )}
-                {page === "usersCompanies" && (
+                </PageSlot>
+                <PageSlot active={page === "usersCompanies"}>
                   <UsersCompaniesPage
                     onAddUser={() => openUserModal("company")}
                     onOpenNotaries={() => setPage("usersNotaries")}
@@ -404,8 +421,8 @@ export default function App() {
                     }}
                     onEditCompany={openEditCompanyModal}
                   />
-                )}
-                {page === "usersNotaries" && (
+                </PageSlot>
+                <PageSlot active={page === "usersNotaries"}>
                   <UsersNotariesPage
                     onAddUser={() => openUserModal("notary")}
                     onOpenCompanies={() => setPage("usersCompanies")}
@@ -416,7 +433,7 @@ export default function App() {
                     }}
                     onEditNotary={openEditNotaryModal}
                   />
-                )}
+                </PageSlot>
                 {/* 
                 {page === "usersRequests" && (
                   <UsersRequestsPage
@@ -426,14 +443,14 @@ export default function App() {
                   />
                 )}
                 */}
-                {page === "companyDetails" && (
+                <PageSlot active={page === "companyDetails"}>
                   <CompanyDetailsPage
                     company={currentViewedCompany}
                     onBack={() => setPage("usersCompanies")}
                     onEdit={openEditCompanyModal}
                   />
-                )}
-                 {page === "notaryProfile" && (
+                </PageSlot>
+                 <PageSlot active={page === "notaryProfile"}>
                   <NotaryProfilePage
                     notary={currentViewedNotary}
                     onBack={() => setPage("usersNotaries")}
@@ -448,8 +465,8 @@ export default function App() {
                       setPage("orders");
                     }}
                   />
-                )}
-                {page === "orders" && (
+                </PageSlot>
+                <PageSlot active={page === "orders"}>
                   <OrdersPage
                     initialFilter={ordersInitialFilter}
                     onOpenOrder={(orderId) => {
@@ -463,8 +480,8 @@ export default function App() {
                       setAssignModalOpen(true);
                     }}
                   />
-                )}
-                {page === "orderDetails" && (
+                </PageSlot>
+                <PageSlot active={page === "orderDetails"}>
                   <OrderDetailsPage
                     orderId={selectedOrderId}
                     onBack={() => {
@@ -473,8 +490,8 @@ export default function App() {
                     }}
                     onAssign={() => setAssignModalOpen(true)}
                   />
-                )}
-                {page === "communications" && (
+                </PageSlot>
+                <PageSlot active={page === "communications"}>
                   <CommunicationsPage
                     onOpenOrder={(orderId) => {
                       setSelectedOrderId(orderId);
@@ -482,24 +499,30 @@ export default function App() {
                       setPage("orderDetails");
                     }}
                   />
-                )}
-                {page === "documents" && (
+                </PageSlot>
+                <PageSlot active={page === "documents"}>
                   <DocumentsPage
                     onOpenDocument={(doc) => {
                       setSelectedDocument(doc);
                       setPage("documentView");
                     }}
                   />
-                )}
-                {page === "documentView" && (
+                </PageSlot>
+                <PageSlot active={page === "documentView"}>
                   <DocumentViewPage
                     document={selectedDocument}
                     onBack={() => setPage("documents")}
                   />
-                )}
-                {page === "analytics" && <AnalyticsPage onNavigate={(newPage) => setPage(newPage)} />}
-                {page === "settings" && <SettingsPage />}
-                {page === "notifications" && <NotificationsPage />}
+                </PageSlot>
+                <PageSlot active={page === "analytics"}>
+                  <AnalyticsPage onNavigate={(newPage) => setPage(newPage)} />
+                </PageSlot>
+                <PageSlot active={page === "settings"}>
+                  <SettingsPage />
+                </PageSlot>
+                <PageSlot active={page === "notifications"}>
+                  <NotificationsPage />
+                </PageSlot>
               </div>
             </div>
           </main>
