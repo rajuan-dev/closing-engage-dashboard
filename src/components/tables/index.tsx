@@ -301,9 +301,9 @@ export function OrderTable({
                 <td className="px-5 py-5">
                   <button
                     onClick={() => onOpenOrder(id)}
-                    className="whitespace-pre-line text-left font-semibold leading-6 text-brand-500 focus:outline-none hover:text-brand-600 transition animate-hover"
+                    className="whitespace-nowrap text-left font-semibold leading-6 text-brand-500 focus:outline-none hover:text-brand-600 transition animate-hover"
                   >
-                    {id.replace("-", "-\n")}
+                    {id}
                   </button>
                 </td>
                 <td className="px-5 py-5">
