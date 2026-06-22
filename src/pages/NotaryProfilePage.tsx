@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
-import { usersApi } from "../api/users";
+import { usersApi, type NotaryCredentials } from "../api/users";
 import { documentsApi } from "../api/documents";
 import { useToast } from "../components/Toast";
 import {
@@ -10,7 +10,7 @@ import {
   TableHeader,
   StatusBadge,
 } from "../components/common";
-import { Eye, FileText, Download, ArrowLeft, Plus, Trash2, ShieldCheck, KeyRound, Copy } from "lucide-react";
+import { Eye, FileText, Download, ArrowLeft, Plus, Trash2, ShieldCheck, KeyRound, Copy, Check, X, FileBadge2 } from "lucide-react";
 import { profileGradients } from "../data";
 import type { StatusKey, NotaryUser } from "../types";
 import { firstPasswordVault } from "../utils/firstPasswordVault";
@@ -53,6 +53,49 @@ export function NotaryProfilePage({
   const [isVerifying, setIsVerifying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+
+  // Notary-submitted professional credentials
+  const [credentials, setCredentials] = useState<NotaryCredentials | null>(null);
+  const [loadingCredentials, setLoadingCredentials] = useState(true);
+  const [reviewingCredentialId, setReviewingCredentialId] = useState<string | null>(null);
+  const notaryId = notary.id;
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoadingCredentials(true);
+    usersApi
+      .getNotaryCredentials(notaryId)
+      .then((data) => {
+        if (isMounted) setCredentials(data);
+      })
+      .catch((error) => {
+        if (isMounted) {
+          showToast(error instanceof Error ? error.message : "Could not load credentials.", { variant: "error" });
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoadingCredentials(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [notaryId, showToast]);
+
+  const reviewCredential = (credentialId: string, status: "Approved" | "Rejected", documentName: string) => {
+    setReviewingCredentialId(credentialId);
+    void usersApi
+      .reviewNotaryCredential(notaryId, credentialId, status)
+      .then((updated) => {
+        setCredentials(updated);
+        showToast(`"${documentName}" ${status.toLowerCase()}.`, { variant: "success" });
+      })
+      .catch((error) => {
+        showToast(error instanceof Error ? error.message : "Could not update credential.", { variant: "error" });
+      })
+      .finally(() => {
+        setReviewingCredentialId(null);
+      });
+  };
 
   // Simulated Verify / Approve Notary request
   const handleVerify = () => {
@@ -404,6 +447,90 @@ export function NotaryProfilePage({
               Once the user changes or resets it, the visible copy is removed.
             </p>
           </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard className="p-6">
+        <div className="flex items-center justify-between border-b border-line pb-4 mb-5">
+          <h3 className="text-[18px] font-semibold text-slate-900">Submitted Credentials</h3>
+          <span className="text-[12px] font-semibold text-slate-500">
+            {loadingCredentials ? "Loading…" : `${credentials?.credentials.length ?? 0} on file`}
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {loadingCredentials ? (
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-6 text-center text-[13px] font-medium text-slate-500">
+              Loading credentials…
+            </div>
+          ) : (credentials?.credentials.length ?? 0) === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-6 text-center text-[13px] font-medium text-slate-500">
+              This notary has not submitted any credentials yet.
+            </div>
+          ) : (
+            credentials!.credentials.map((cred) => {
+              const isReviewing = reviewingCredentialId === cred.id;
+              const statusStyle =
+                cred.status === "Approved"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : cred.status === "Rejected"
+                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200";
+              return (
+                <div
+                  key={cred.id}
+                  className="flex flex-wrap items-center gap-4 rounded-xl border border-line px-4 py-3.5 hover:border-slate-300 transition"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#EEF5FF] text-brand-600">
+                    <FileBadge2 size={18} />
+                  </div>
+                  <div className="flex-1 min-w-[180px]">
+                    <div className="font-semibold text-slate-800 text-[14px]">{cred.documentName}</div>
+                    <div className="text-[12px] text-slate-500 mt-0.5">
+                      {cred.issuer} · {cred.uploadDate} · {cred.verification}
+                    </div>
+                  </div>
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${statusStyle}`}>
+                    {cred.status}
+                  </span>
+                  {cred.status === "Pending" ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => reviewCredential(cred.id, "Approved", cred.documentName)}
+                        disabled={isReviewing}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-2 text-[12px] font-semibold text-white hover:bg-emerald-600 transition focus:outline-none disabled:opacity-60"
+                      >
+                        {isReviewing ? (
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        ) : (
+                          <Check size={14} />
+                        )}
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => reviewCredential(cred.id, "Rejected", cred.documentName)}
+                        disabled={isReviewing}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-600 hover:bg-rose-100 transition focus:outline-none disabled:opacity-60"
+                      >
+                        <X size={14} />
+                        Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        reviewCredential(cred.id, cred.status === "Approved" ? "Rejected" : "Approved", cred.documentName)
+                      }
+                      disabled={isReviewing}
+                      className="text-[12px] font-semibold text-brand-600 hover:text-brand-700 transition focus:outline-none disabled:opacity-60"
+                    >
+                      {isReviewing ? "Updating…" : cred.status === "Approved" ? "Reject" : "Approve"}
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </SectionCard>
 

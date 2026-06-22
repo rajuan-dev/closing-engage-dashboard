@@ -1,6 +1,29 @@
 import type { CompanyUser, NotaryUser, RegistrationRequest } from "../types";
 import { adminAuth } from "./auth";
 
+export type NotaryCredentialStatus = "Pending" | "Approved" | "Rejected";
+export type NotaryCredentialVerification = "Auto-Verified" | "Manual Review";
+
+export interface NotaryCredentialRecord {
+  id: string;
+  documentName: string;
+  issuer: string;
+  uploadDate: string;
+  verification: NotaryCredentialVerification;
+  status: NotaryCredentialStatus;
+}
+
+export interface NotaryCredentials {
+  licenseNumber: string;
+  commissionAuthority: string;
+  commissionExpiry: string;
+  eoCoverage: string;
+  verified: boolean;
+  backgroundScreeningStatus: "Pending" | "Verified" | "Failed";
+  backgroundScreeningDetail: string;
+  credentials: NotaryCredentialRecord[];
+}
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ||
   "http://localhost:5000/api/v1";
 
@@ -79,6 +102,21 @@ export const usersApi = {
       method: "DELETE",
     });
     return true;
+  },
+
+  async getNotaryCredentials(id: string): Promise<NotaryCredentials> {
+    return request<NotaryCredentials>(`/users/notaries/${id}/credentials`);
+  },
+
+  async reviewNotaryCredential(
+    id: string,
+    credentialId: string,
+    status: Extract<NotaryCredentialStatus, "Approved" | "Rejected">,
+  ): Promise<NotaryCredentials> {
+    return request<NotaryCredentials>(`/users/notaries/${id}/credentials/${credentialId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
   },
 
   async getAccessRequests(): Promise<RegistrationRequest[]> {
