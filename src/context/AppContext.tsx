@@ -11,6 +11,11 @@ export interface AdminProfile {
   contactNumber: string;
   businessAddress: string;
   avatarUrl?: string;
+  notifications?: {
+    email: boolean;
+    orders: boolean;
+    documents: boolean;
+  };
 }
 
 export interface AppContextType {

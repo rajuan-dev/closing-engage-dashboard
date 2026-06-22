@@ -61,6 +61,11 @@ export default function App() {
     contactNumber: "+1 (555) 010-1000",
     businessAddress: "Austin, Texas",
     avatarUrl: "",
+    notifications: {
+      email: true,
+      orders: true,
+      documents: false,
+    },
   };
 
   const [page, setPage] = useState<PageKey>(() => {

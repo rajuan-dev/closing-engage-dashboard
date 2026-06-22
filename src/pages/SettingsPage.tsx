@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Mail, FileText, Save, Loader2, KeyRound, Camera } from "lucide-react";
 import { adminAuth } from "../api/auth";
 import { Avatar, SectionCard, GhostButton, PrimaryButton, FormSection, NotificationRow } from "../components/common";
@@ -18,9 +18,9 @@ export function SettingsPage() {
   };
 
   const initialNotifications = {
-    emailNotifications: true,
-    orderUpdates: true,
-    documentUpdates: false,
+    emailNotifications: adminProfile.notifications?.email ?? true,
+    orderUpdates: adminProfile.notifications?.orders ?? true,
+    documentUpdates: adminProfile.notifications?.documents ?? false,
   };
 
   const [profileForm, setProfileForm] = useState(adminProfile);
@@ -31,6 +31,15 @@ export function SettingsPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setProfileForm(adminProfile);
+    setNotificationForm({
+      emailNotifications: adminProfile.notifications?.email ?? true,
+      orderUpdates: adminProfile.notifications?.orders ?? true,
+      documentUpdates: adminProfile.notifications?.documents ?? false,
+    });
+  }, [adminProfile]);
 
   const profileInitials = profileForm.fullName
     .split(" ")
@@ -45,20 +54,19 @@ export function SettingsPage() {
     setSecurityForm((current) => ({ ...current, [field]: value }));
   
   const toggleNotification = (field: keyof typeof initialNotifications) => {
+    if (!isEditing) return;
     const newValue = !notificationForm[field];
     setNotificationForm((current) => ({ ...current, [field]: newValue }));
-    
-    // Simulate real-time API sync for toggles
-    showToast("Preferences Updated", { 
-      message: `${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} ${newValue ? "enabled" : "disabled"}.`,
-      variant: "info"
-    });
   };
 
   const handleReset = () => {
     setProfileForm(adminProfile);
     setSecurityForm(initialSecurity);
-    setNotificationForm(initialNotifications);
+    setNotificationForm({
+      emailNotifications: adminProfile.notifications?.email ?? true,
+      orderUpdates: adminProfile.notifications?.orders ?? true,
+      documentUpdates: adminProfile.notifications?.documents ?? false,
+    });
     setIsEditing(false);
     showToast("Changes Discarded", { message: "Your settings have been reset to their original state.", variant: "info" });
   };
@@ -95,7 +103,14 @@ export function SettingsPage() {
     setIsSavingProfile(true);
 
     try {
-      const session = await adminAuth.updateProfile(profileForm);
+      const session = await adminAuth.updateProfile({
+        ...profileForm,
+        notifications: {
+          email: notificationForm.emailNotifications,
+          orders: notificationForm.orderUpdates,
+          documents: notificationForm.documentUpdates,
+        },
+      });
       setAdminProfile(session.admin.profile);
       setIsSavingProfile(false);
       setIsEditing(false);
@@ -309,18 +324,21 @@ export function SettingsPage() {
                 text="Receive global summary emails"
                 checked={notificationForm.emailNotifications}
                 onToggle={() => toggleNotification("emailNotifications")}
+                disabled={!isEditing}
               />
               <NotificationRow
                 title="Order Updates"
                 text="Real-time alerts for escrow changes"
                 checked={notificationForm.orderUpdates}
                 onToggle={() => toggleNotification("orderUpdates")}
+                disabled={!isEditing}
               />
               <NotificationRow
                 title="Document Updates"
                 text="Alerts when new documents are signed"
                 checked={notificationForm.documentUpdates}
                 onToggle={() => toggleNotification("documentUpdates")}
+                disabled={!isEditing}
               />
             </div>
           </FormSection>

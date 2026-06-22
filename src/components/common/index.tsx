@@ -567,19 +567,21 @@ export function NotificationRow({
   text,
   checked,
   onToggle,
+  disabled = false,
 }: {
   title: string;
   text: string;
   checked: boolean;
   onToggle?: () => void;
+  disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className={`flex items-center justify-between transition-opacity duration-200 ${disabled ? "opacity-60" : ""}`}>
       <div>
         <div className="text-[14px] font-semibold text-slate-855">{title}</div>
         <div className="text-[12px] text-slate-500 leading-normal">{text}</div>
       </div>
-      <button type="button" onClick={onToggle} className="focus:outline-none">
+      <button type="button" onClick={onToggle} disabled={disabled} className="focus:outline-none disabled:pointer-events-none">
         <Switch checked={checked} />
       </button>
     </div>
