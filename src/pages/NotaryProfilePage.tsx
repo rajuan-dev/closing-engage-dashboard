@@ -372,13 +372,27 @@ export function NotaryProfilePage({
         </SectionCard>
         <div className="min-h-[244px] rounded-[8px] bg-[#2866D1] p-8 text-white shadow-[0_14px_32px_rgba(40,102,209,0.2)]">
           <h3 className="text-[20px] font-bold tracking-tight">Professional Credentials</h3>
-          <div className="mt-7 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60">Commission Expiry</div>
-          <div className="mt-2 text-[22px] font-semibold">{notary.expiry || "Not Provided"}</div>
-          <div className="mt-8 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60">Service Area</div>
-          <div className="mt-2 max-w-[290px] text-[17px] font-medium leading-7 text-white/85">
-            {notary.serviceArea || "Service Area Not Provided"}
+          <div className="mt-5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60">Commission Authority</div>
+          <div className="mt-2 text-[17px] font-semibold">{credentials?.commissionAuthority || "Not Provided"}</div>
+          <div className="mt-5 grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60">Commission Expiry</div>
+              <div className="mt-1.5 text-[17px] font-semibold">{credentials?.commissionExpiry || notary.expiry || "Not Provided"}</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60">License Number</div>
+              <div className="mt-1.5 text-[17px] font-semibold">{credentials?.licenseNumber || notary.license || "Not Provided"}</div>
+            </div>
           </div>
-          <div className="mt-7 grid grid-cols-2 gap-3">
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-white/10 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">E&amp;O Coverage</div>
+              <div className="mt-1 truncate text-[14px] font-bold">{credentials?.eoCoverage || "Not Provided"}</div>
+            </div>
+            <div className="rounded-xl bg-white/10 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">Background Screening</div>
+              <div className="mt-1 truncate text-[14px] font-bold">{credentials?.backgroundScreeningStatus || "Pending"}</div>
+            </div>
             <div className="rounded-xl bg-white/10 px-3 py-2">
               <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">Verification</div>
               <div className="mt-1 text-[14px] font-bold">{notary.verify ? "Verified" : "Pending"}</div>
