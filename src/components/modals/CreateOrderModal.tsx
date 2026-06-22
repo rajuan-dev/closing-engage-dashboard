@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MapPin, Calendar, UserPlus, ShieldCheck, FileText } from "lucide-react";
 import { useAppContext } from "../../context/AppContext";
 import { ordersApi } from "../../api/orders";
+import { Avatar } from "../common";
+import { profileGradients } from "../../data";
 
 // Helper functions to convert date formats between MM/DD/YYYY and YYYY-MM-DD
 const convertToInputDate = (dateStr?: string): string => {
@@ -38,7 +40,7 @@ export function CreateOrderModal({
   onClose: () => void;
   onCreate: () => void;
 }) {
-  const { setOrders } = useAppContext();
+  const { setOrders, orders, notaries } = useAppContext();
   const [form, setForm] = useState({
     titleCompany: "Grand Peak Title",
     propertyAddress: "452 Pine St, San Francisco, CA 94104",
@@ -57,6 +59,47 @@ export function CreateOrderModal({
     { name: "Instructions_Sheet.pdf", meta: "1.1 MB • Uploaded 2h ago" },
   ]);
   const [error, setError] = useState("");
+
+  const gradientForName = (name: string) => {
+    const normalized = name.toLowerCase();
+    if (normalized.includes("sarah") || normalized.includes("jane")) return profileGradients.jane;
+    if (normalized.includes("mark") || normalized.includes("robert")) return profileGradients.mark;
+    return profileGradients.alex;
+  };
+
+  const suggestedNotary = useMemo(() => {
+    const companyOrders = orders.filter((order) => order[1] === form.titleCompany);
+    const completedAssignments = companyOrders.filter((order) => {
+      const notaryName = order[3];
+      return notaryName && notaryName !== "Unassigned" && notaryName !== "Open for All";
+    });
+
+    if (completedAssignments.length === 0) {
+      return null;
+    }
+
+    const counts = new Map<string, number>();
+    completedAssignments.forEach((order) => {
+      const name = order[3].trim().toLowerCase();
+      counts.set(name, (counts.get(name) || 0) + 1);
+    });
+
+    const topName = [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0];
+    if (!topName) {
+      return null;
+    }
+
+    const notary = notaries.find((entry) => entry.fullName.trim().toLowerCase() === topName);
+    const historicalOrderCount = counts.get(topName) || 0;
+
+    return {
+      notary,
+      historicalOrderCount,
+      displayName: notary?.fullName || completedAssignments.find((order) => order[3].trim().toLowerCase() === topName)?.[3] || "Suggested Notary",
+      serviceArea: notary?.serviceArea || "Previously assigned to this title company",
+      specialty: notary?.specialty || "Trusted prior signing partner",
+    };
+  }, [form.titleCompany, notaries, orders]);
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -288,6 +331,43 @@ export function CreateOrderModal({
                       ))}
                     </div>
                   </div>
+
+                  <div className="rounded-2xl border border-[#DCE5F2] bg-[#F8FBFF] p-4">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Preferred Notary (Optional)
+                    </div>
+                    {suggestedNotary ? (
+                      <div className="mt-3 flex items-start gap-3">
+                        <Avatar
+                          className="h-12 w-12 rounded-[14px]"
+                          gradient={gradientForName(suggestedNotary.displayName)}
+                          src={suggestedNotary.notary?.avatarUrl}
+                          alt={`${suggestedNotary.displayName} avatar`}
+                          initials={suggestedNotary.notary?.initials || suggestedNotary.displayName.slice(0, 2).toUpperCase()}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="text-[15px] font-semibold text-slate-900">{suggestedNotary.displayName}</div>
+                            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-emerald-700">
+                              Suggested
+                            </span>
+                          </div>
+                          <div className="mt-1 text-[13px] text-slate-500">{suggestedNotary.specialty}</div>
+                          <div className="mt-1 text-[12px] font-medium text-slate-400">
+                            {suggestedNotary.serviceArea}
+                          </div>
+                          <div className="mt-2 text-[12px] font-semibold text-brand-600">
+                            Worked on {suggestedNotary.historicalOrderCount} previous order{suggestedNotary.historicalOrderCount === 1 ? "" : "s"} for this company
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-xl border border-dashed border-[#D5E2F7] bg-white px-4 py-4 text-[13px] leading-6 text-slate-500">
+                        A suggested notary will appear here after the company has prior assignment history.
+                      </div>
+                    )}
+                  </div>
+
                   <div className="rounded-2xl bg-[#F5F8FC] px-4 py-4">
                     <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">Ready to Assign</div>
                     <div className="mt-2 text-[15px] font-semibold text-slate-800">This order can move directly into assignment.</div>

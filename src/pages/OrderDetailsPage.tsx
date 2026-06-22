@@ -20,8 +20,10 @@ import {
   InfoBlock,
   ActivityLog,
 } from "../components/common";
+import { Avatar } from "../components/common";
 import { Modal } from "../components/modals/Modal";
 import { useToast } from "../components/Toast";
+import { profileGradients } from "../data";
 import { stepItems } from "../data";
 import type { StatusKey } from "../types";
 
@@ -43,7 +45,7 @@ export function OrderDetailsPage({
   onBack: () => void;
   onAssign: () => void;
 }) {
-  const { orders, setOrders } = useAppContext();
+  const { orders, setOrders, notaries } = useAppContext();
   const { showToast } = useToast();
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -98,6 +100,16 @@ export function OrderDetailsPage({
 
   const [id, company, , notaryName, location, date, status, avatar] = activeOrder;
   const isOpenForAll = notaryName === "Open for All";
+  const assignedNotary = useMemo(
+    () => notaries.find((entry) => entry.fullName.trim().toLowerCase() === notaryName.trim().toLowerCase()),
+    [notaries, notaryName],
+  );
+  const notaryGradient = useMemo(() => {
+    const normalized = notaryName.toLowerCase();
+    if (normalized.includes("sarah")) return profileGradients.jane;
+    if (normalized.includes("mark")) return profileGradients.mark;
+    return profileGradients.alex;
+  }, [notaryName]);
   const normalizedNotaryName = notaryName.trim().toLowerCase();
   const allScanbackDocuments = documents.filter((document) => {
     if (document.uploaderRole === "notary") return true;
@@ -519,9 +531,38 @@ export function OrderDetailsPage({
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-6">
-                  <InfoBlock label="Assigned Professional" lines={[notaryName]} strongFirst />
-                  <InfoBlock label="Specialty Commission" lines={["Errors & Omissions Insured"]} strongFirst />
+                <div className="flex items-start gap-4 rounded-2xl border border-slate-100 bg-[#F8FBFF] p-4">
+                  <Avatar
+                    className="h-14 w-14 rounded-[16px]"
+                    gradient={notaryGradient}
+                    src={assignedNotary?.avatarUrl}
+                    alt={`${notaryName} avatar`}
+                    initials={assignedNotary?.initials || notaryName.slice(0, 2).toUpperCase()}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-[16px] font-bold text-slate-900">{notaryName}</div>
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-emerald-700">
+                        {assignedNotary?.verify ? "Verified" : "Assigned"}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[13px] text-slate-500">
+                      {assignedNotary?.specialty || "Professional Notary"}
+                    </div>
+                    <div className="mt-1 text-[12px] font-medium text-slate-400">
+                      {assignedNotary?.serviceArea || location}
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-4 text-[13px]">
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Email</div>
+                        <div className="mt-1 font-medium text-slate-700">{assignedNotary?.email || "Not available"}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Phone</div>
+                        <div className="mt-1 font-medium text-slate-700">{assignedNotary?.phone || "Not available"}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
