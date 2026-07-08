@@ -36,6 +36,8 @@ interface ApiResponse<T> {
   data: T;
 }
 
+interface EmptyResponse extends Record<string, never> {}
+
 export class ApiError extends Error {
   status: number;
 
@@ -133,5 +135,43 @@ export const adminAuth = {
     });
 
     await parseResponse<Record<string, never>>(response);
+  },
+  async requestPasswordReset(email: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, role: 'admin' }),
+    });
+
+    await parseResponse<EmptyResponse>(response);
+  },
+  async verifyPasswordResetOtp(email: string, otp: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, role: 'admin', otp }),
+    });
+
+    await parseResponse<EmptyResponse>(response);
+  },
+  async resetPasswordWithOtp(
+    email: string,
+    otp: string,
+    newPassword: string,
+    confirmPassword: string,
+  ): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, role: 'admin', otp, newPassword, confirmPassword }),
+    });
+
+    await parseResponse<EmptyResponse>(response);
   },
 };

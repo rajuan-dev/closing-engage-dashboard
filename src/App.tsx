@@ -341,6 +341,11 @@ export default function App() {
           setIsAuthenticated(true);
           setPage("dashboard");
         }}
+        onRequestPasswordReset={(email) => adminAuth.requestPasswordReset(email)}
+        onVerifyPasswordResetOtp={(email, otp) => adminAuth.verifyPasswordResetOtp(email, otp)}
+        onResetPasswordWithOtp={(email, otp, newPassword, confirmPassword) =>
+          adminAuth.resetPasswordWithOtp(email, otp, newPassword, confirmPassword)
+        }
       />
     );
   }
