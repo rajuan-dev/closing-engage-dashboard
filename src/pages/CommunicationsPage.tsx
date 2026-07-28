@@ -297,13 +297,15 @@ export function CommunicationsPage({
             description="Manage live order conversations, jump across threads quickly, and respond without leaving the admin workspace."
           />
           <div className="hidden shrink-0 items-center gap-3 lg:flex">
-            <div className="rounded-2xl border border-[#dbe6f6] bg-white px-4 py-3 text-right shadow-sm">
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Active Threads</div>
-              <div className="mt-1 text-[24px] font-black tracking-[-0.04em] text-slate-900">{activeConversationCount}</div>
+            <div className="w-[150px] h-[72px] flex flex-col justify-between rounded-2xl border border-[#dbe6f6] bg-white px-4 py-3 text-right shadow-sm">
+              <div className="w-full text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Active Threads</div>
+              <div className="w-full text-[24px] font-black tracking-[-0.04em] text-slate-900 leading-none">{activeConversationCount}</div>
             </div>
-            <div className="rounded-2xl border border-[#dbe6f6] bg-white px-4 py-3 text-right shadow-sm">
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Selected Order</div>
-              <div className="mt-1 text-[15px] font-extrabold text-brand-700">{selectedRow?.id || "None"}</div>
+            <div className="w-[150px] h-[72px] flex flex-col justify-between rounded-2xl border border-[#dbe6f6] bg-white px-4 py-3 text-right shadow-sm">
+              <div className="w-full text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Selected Order</div>
+              <div className="w-full text-[15px] font-extrabold text-brand-700 leading-none truncate" title={selectedRow?.id || "None"}>
+                {selectedRow?.id || "None"}
+              </div>
             </div>
           </div>
         </div>

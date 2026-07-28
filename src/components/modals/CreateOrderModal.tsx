@@ -38,7 +38,7 @@ export function CreateOrderModal({
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: () => void;
+  onCreate: (orderId: string) => void;
 }) {
   const { setOrders, orders, notaries } = useAppContext();
   const [form, setForm] = useState({
@@ -132,7 +132,7 @@ export function CreateOrderModal({
       });
       setOrders((prev: any) => [newOrder, ...prev]);
       setError("");
-      onCreate();
+      onCreate(newOrder[0]);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Unable to create order.");
     }

@@ -454,27 +454,31 @@ export default function App() {
                 )}
                 */}
                 <PageSlot active={page === "companyDetails"}>
-                  <CompanyDetailsPage
-                    company={currentViewedCompany}
-                    onBack={() => setPage("usersCompanies")}
-                    onEdit={openEditCompanyModal}
-                  />
+                  {currentViewedCompany && (
+                    <CompanyDetailsPage
+                      company={currentViewedCompany}
+                      onBack={() => setPage("usersCompanies")}
+                      onEdit={openEditCompanyModal}
+                    />
+                  )}
                 </PageSlot>
                  <PageSlot active={page === "notaryProfile"}>
-                  <NotaryProfilePage
-                    notary={currentViewedNotary}
-                    onBack={() => setPage("usersNotaries")}
-                    onEdit={openEditNotaryModal}
-                    onViewOrder={(orderId) => {
-                      setSelectedOrderId(orderId);
-                      setOrderDetailsBackPage("notaryProfile");
-                      setPage("orderDetails");
-                    }}
-                    onViewAllOrders={() => {
-                      setOrdersInitialFilter("All Orders");
-                      setPage("orders");
-                    }}
-                  />
+                  {currentViewedNotary && (
+                    <NotaryProfilePage
+                      notary={currentViewedNotary}
+                      onBack={() => setPage("usersNotaries")}
+                      onEdit={openEditNotaryModal}
+                      onViewOrder={(orderId) => {
+                        setSelectedOrderId(orderId);
+                        setOrderDetailsBackPage("notaryProfile");
+                        setPage("orderDetails");
+                      }}
+                      onViewAllOrders={() => {
+                        setOrdersInitialFilter("All Orders");
+                        setPage("orders");
+                      }}
+                    />
+                  )}
                 </PageSlot>
                 <PageSlot active={page === "orders"}>
                   <OrdersPage

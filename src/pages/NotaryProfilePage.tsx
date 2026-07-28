@@ -40,15 +40,6 @@ export function NotaryProfilePage({
     : fallbackPassword;
   const [passwordCopied, setPasswordCopied] = useState(false);
 
-  if (!notary) {
-    return (
-      <div className="space-y-4 py-8 text-center bg-white rounded-xl border border-line">
-        <p className="text-slate-500 font-medium">No notary selected.</p>
-        <GhostButton onClick={onBack}>&larr; Back to Notaries</GhostButton>
-      </div>
-    );
-  }
-
   // Live backend action state
   const [isVerifying, setIsVerifying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -58,9 +49,10 @@ export function NotaryProfilePage({
   const [credentials, setCredentials] = useState<NotaryCredentials | null>(null);
   const [loadingCredentials, setLoadingCredentials] = useState(true);
   const [reviewingCredentialId, setReviewingCredentialId] = useState<string | null>(null);
-  const notaryId = notary.id;
+  const notaryId = notary?.id || "";
 
   useEffect(() => {
+    if (!notaryId) return;
     let isMounted = true;
     setLoadingCredentials(true);
     usersApi
@@ -96,6 +88,43 @@ export function NotaryProfilePage({
         setReviewingCredentialId(null);
       });
   };
+
+  // Live assigned orders lookup from global state
+  const notaryOrders = useMemo(() => {
+    if (!notary) return [];
+    const matches = orders.filter((o) => o[3] === notary.fullName);
+    return matches.map((o) => ({
+      id: o[0],
+      status: o[6],
+      date: o[5],
+    }));
+  }, [orders, notary?.fullName]);
+
+  const uploadedDocs = useMemo(() => {
+    if (!notary) return [];
+    const notaryOrderIds = new Set(notaryOrders.map((order) => order.id));
+    return documents
+      .filter((doc: any) => {
+        const orderId = doc[1];
+        const uploadedBy = String(doc[2] || "").toLowerCase();
+        return notaryOrderIds.has(orderId) || uploadedBy.includes(notary.fullName.toLowerCase());
+      })
+      .map((doc: any) => ({
+        title: doc[0],
+        orderId: doc[1],
+        date: doc[3],
+        id: doc[6],
+      }));
+  }, [documents, notary?.fullName, notaryOrders]);
+
+  if (!notary) {
+    return (
+      <div className="space-y-4 py-8 text-center bg-white rounded-xl border border-line">
+        <p className="text-slate-500 font-medium">No notary selected.</p>
+        <GhostButton onClick={onBack}>&larr; Back to Notaries</GhostButton>
+      </div>
+    );
+  }
 
   // Simulated Verify / Approve Notary request
   const handleVerify = () => {
@@ -205,32 +234,6 @@ export function NotaryProfilePage({
       "danger"
     );
   };
-
-  // Live assigned orders lookup from global state
-  const notaryOrders = useMemo(() => {
-    const matches = orders.filter((o) => o[3] === notary.fullName);
-    return matches.map((o) => ({
-      id: o[0],
-      status: o[6],
-      date: o[5],
-    }));
-  }, [orders, notary.fullName]);
-
-  const uploadedDocs = useMemo(() => {
-    const notaryOrderIds = new Set(notaryOrders.map((order) => order.id));
-    return documents
-      .filter((doc: any) => {
-        const orderId = doc[1];
-        const uploadedBy = String(doc[2] || "").toLowerCase();
-        return notaryOrderIds.has(orderId) || uploadedBy.includes(notary.fullName.toLowerCase());
-      })
-      .map((doc: any) => ({
-        title: doc[0],
-        orderId: doc[1],
-        date: doc[3],
-        id: doc[6],
-      }));
-  }, [documents, notary.fullName, notaryOrders]);
 
   const getGradient = () => {
     if (notary.fullName.toLowerCase().includes("sarah")) return profileGradients.jane;

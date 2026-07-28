@@ -90,13 +90,32 @@ export function OrderDetailsPage({
     };
   }, [showPreviewModal, showRejectModal, showAuditTrailModal]);
 
-  // Dynamically load the matching order or fallback to the first active order
+  // Only render details for a live order that exists in the current dataset.
   const activeOrder = useMemo(() => {
-    if (!orderId) return orders[0] || ["#ORD-78241", "Grand Peak Title", "GP", "Sarah Harrison", "San Francisco, CA", "Oct 24, 2024", "Under Review", "jane"];
-    return orders.find((o) => o[0] === orderId) || orders[0];
+    if (!orderId) return null;
+    return orders.find((o) => o[0] === orderId) || null;
   }, [orders, orderId]);
 
-  if (!activeOrder) return null;
+  if (!activeOrder) {
+    return (
+      <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="max-w-[520px]">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">Order Details</div>
+          <h1 className="mt-3 text-[28px] font-bold tracking-[-0.03em] text-slate-900">Order not available</h1>
+          <p className="mt-3 text-[15px] leading-7 text-slate-500">
+            This order could not be found in the current dataset. It may have been removed, or the selected order ID is no
+            longer valid.
+          </p>
+          <div className="mt-6">
+            <GhostButton onClick={onBack}>
+              <ArrowLeft size={16} />
+              Back
+            </GhostButton>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const [id, company, , notaryName, location, date, status, avatar] = activeOrder;
   const isOpenForAll = notaryName === "Open for All";
