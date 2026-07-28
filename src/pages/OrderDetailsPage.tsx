@@ -96,28 +96,13 @@ export function OrderDetailsPage({
     return orders.find((o) => o[0] === orderId) || null;
   }, [orders, orderId]);
 
-  if (!activeOrder) {
-    return (
-      <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
-        <div className="max-w-[520px]">
-          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">Order Details</div>
-          <h1 className="mt-3 text-[28px] font-bold tracking-[-0.03em] text-slate-900">Order not available</h1>
-          <p className="mt-3 text-[15px] leading-7 text-slate-500">
-            This order could not be found in the current dataset. It may have been removed, or the selected order ID is no
-            longer valid.
-          </p>
-          <div className="mt-6">
-            <GhostButton onClick={onBack}>
-              <ArrowLeft size={16} />
-              Back
-            </GhostButton>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const [id, company, , notaryName, location, date, status, avatar] = activeOrder;
+  const id = activeOrder?.[0] ?? orderId ?? "";
+  const company = activeOrder?.[1] ?? "";
+  const notaryName = activeOrder?.[3] ?? "";
+  const location = activeOrder?.[4] ?? "";
+  const date = activeOrder?.[5] ?? "";
+  const status = activeOrder?.[6] ?? "Received";
+  const avatar = activeOrder?.[7] ?? "none";
   const isOpenForAll = notaryName === "Open for All";
   const assignedNotary = useMemo(
     () => notaries.find((entry) => entry.fullName.trim().toLowerCase() === notaryName.trim().toLowerCase()),
@@ -242,6 +227,27 @@ export function OrderDetailsPage({
     if (status === "Assigned" || status === "In Progress" || status === "Pending Upload") return 1;
     return 0; // Received
   }, [status]);
+
+  if (!activeOrder) {
+    return (
+      <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="max-w-[520px]">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">Order Details</div>
+          <h1 className="mt-3 text-[28px] font-bold tracking-[-0.03em] text-slate-900">Order not available</h1>
+          <p className="mt-3 text-[15px] leading-7 text-slate-500">
+            This order could not be found in the current dataset. It may have been removed, or the selected order ID is no
+            longer valid.
+          </p>
+          <div className="mt-6">
+            <GhostButton onClick={onBack}>
+              <ArrowLeft size={16} />
+              Back
+            </GhostButton>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleStatusChange = async (newStatus: string) => {
     const updatedOrder = await ordersApi.updateStatus(id, newStatus as OrderStatus);
