@@ -19,7 +19,18 @@ export type OrderStatus =
   | "Rejected"
   | "Pending Upload"
   | "Submitted";
-export type OrderRow = [string, string, string, string, string, string, OrderStatus, "none" | "jane" | "mark"];
+export type OrderPriority = "Standard" | "Rush" | "High Touch" | "High" | "Low" | "Normal Processing" | "Urgent Request";
+export type OrderRow = [
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  OrderStatus,
+  "none" | "jane" | "mark",
+  OrderPriority,
+];
 
 export interface OrderTimelineEvent {
   title: string;

@@ -288,9 +288,10 @@ export function OrderTable({
           </tr>
         </thead>
         <tbody>
-          {paginatedRows.map(([id, company, companyInitials, notary, location, date, status, avatar]) => {
+          {paginatedRows.map(([id, company, companyInitials, notary, location, date, status, avatar, priority]) => {
             const isUnassigned = avatar === "none" || !notary || notary === "Unassigned";
             const isOpenForAll = notary === "Open for All";
+            const isUrgentOrder = priority === "Rush" || priority === "Urgent Request";
             const assignedNotary = isUnassigned
               ? undefined
               : notaries.find((entry) => entry.fullName.toLowerCase() === notary.toLowerCase());
@@ -339,7 +340,14 @@ export function OrderTable({
                 <td className="px-5 py-5 whitespace-pre-line leading-5 text-slate-850">{location}</td>
                 <td className="px-5 py-5 whitespace-pre-line leading-5 text-slate-500">{date}</td>
                 <td className="px-5 py-5">
-                  <StatusBadge status={status as StatusKey} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge status={status as StatusKey} />
+                    {isUrgentOrder ? (
+                      <span className="rounded-full border border-[#fecaca] bg-[#fff1f2] px-3 py-1 text-[11px] font-semibold text-[#dc2626]">
+                        Urgent
+                      </span>
+                    ) : null}
+                  </div>
                 </td>
                 <td className="px-5 py-5">
                   <div className="flex items-center gap-4 text-slate-500">
