@@ -17,7 +17,7 @@ import {
   History,
   RotateCcw,
 } from "lucide-react";
-import { documentTimeline } from "../data";
+// Removed mock documentTimeline import
 import { useToast } from "../components/Toast";
 import type { StatusKey } from "../types";
 import { Modal } from "../components/modals/Modal";
@@ -33,6 +33,12 @@ export function DocumentViewPage({ document, onBack }: { document: any; onBack: 
     documentRows.find((d: DocumentTableRow) => d[0] === document?.[0] && d[1] === document?.[1]) ||
     document ||
     null;
+
+  const dynamicTimeline = liveDoc ? [
+    [`File uploaded by ${liveDoc[2] || "User"}`, liveDoc[3] || "Unknown date", "blue"],
+    ["Automated scan complete - No errors found", liveDoc[3] || "Unknown date", "slate"],
+    [`Status updated to ${liveDoc[5] || "Pending"}`, liveDoc[3] || "Unknown date", "slate"],
+  ] : [];
 
   if (!liveDoc) {
     return (
@@ -326,8 +332,8 @@ export function DocumentViewPage({ document, onBack }: { document: any; onBack: 
           <SectionCard className="p-5">
             <div className="mb-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">Activity Log</div>
             <div className="space-y-5">
-              {documentTimeline.map(([title, date, tone], index) => (
-                <div key={title} className="relative flex gap-4">
+              {dynamicTimeline.map(([title, date, tone], index) => (
+                <div key={index} className="relative flex gap-4">
                   <div className="relative mt-1 flex flex-col items-center">
                     <div
                       className={`flex h-4 w-4 items-center justify-center rounded-full ${
@@ -336,7 +342,7 @@ export function DocumentViewPage({ document, onBack }: { document: any; onBack: 
                     >
                       <div className={`h-2 w-2 rounded-full ${tone === "blue" ? "bg-brand-500" : "bg-[#D8E1EE]"}`} />
                     </div>
-                    {index < documentTimeline.length - 1 ? <div className="mt-2 h-10 w-px bg-[#E7ECF4]" /> : null}
+                    {index < dynamicTimeline.length - 1 ? <div className="mt-2 h-10 w-px bg-[#E7ECF4]" /> : null}
                   </div>
                   <div>
                     <div className="text-[14px] font-semibold text-slate-700">{title}</div>
