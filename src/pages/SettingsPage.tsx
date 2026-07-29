@@ -30,6 +30,7 @@ export function SettingsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -52,11 +53,44 @@ export function SettingsPage() {
     setProfileForm((current) => ({ ...current, [field]: value }));
   const updateSecurity = (field: keyof typeof initialSecurity, value: string) =>
     setSecurityForm((current) => ({ ...current, [field]: value }));
-  
-  const toggleNotification = (field: keyof typeof initialNotifications) => {
-    if (!isEditing) return;
-    const newValue = !notificationForm[field];
-    setNotificationForm((current) => ({ ...current, [field]: newValue }));
+
+  const persistNotifications = async (nextNotifications: typeof initialNotifications) => {
+    setIsSavingNotifications(true);
+
+    try {
+      const session = await adminAuth.updateProfile({
+        notifications: {
+          email: nextNotifications.emailNotifications,
+          orders: nextNotifications.orderUpdates,
+          documents: nextNotifications.documentUpdates,
+        },
+      });
+      setAdminProfile(session.admin.profile);
+    } catch (error) {
+      setNotificationForm({
+        emailNotifications: adminProfile.notifications?.email ?? true,
+        orderUpdates: adminProfile.notifications?.orders ?? true,
+        documentUpdates: adminProfile.notifications?.documents ?? false,
+      });
+      showToast("Update Failed", {
+        message: error instanceof Error ? error.message : "Unable to update notification preferences.",
+        variant: "error",
+      });
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
+
+  const toggleNotification = async (field: keyof typeof initialNotifications) => {
+    if (isSavingNotifications || isSavingProfile) return;
+
+    const nextNotifications = {
+      ...notificationForm,
+      [field]: !notificationForm[field],
+    };
+
+    setNotificationForm(nextNotifications);
+    await persistNotifications(nextNotifications);
   };
 
   const handleReset = () => {
@@ -272,13 +306,20 @@ export function SettingsPage() {
 
         <div className="space-y-5">
           <FormSection title="Security Settings">
-            <div className="space-y-4">
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleUpdatePassword();
+              }}
+            >
               <SettingsInput
                 label="Current Password"
                 value={securityForm.currentPassword}
                 onChange={(value) => updateSecurity("currentPassword", value)}
                 type="password"
                 placeholder="••••••••"
+                autoComplete="current-password"
                 disabled={isUpdatingPassword}
               />
               <SettingsInput
@@ -287,6 +328,7 @@ export function SettingsPage() {
                 onChange={(value) => updateSecurity("newPassword", value)}
                 type="password"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 disabled={isUpdatingPassword}
               />
               <SettingsInput
@@ -295,10 +337,10 @@ export function SettingsPage() {
                 onChange={(value) => updateSecurity("confirmPassword", value)}
                 type="password"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 disabled={isUpdatingPassword}
               />
               <GhostButton 
-                onClick={handleUpdatePassword}
                 disabled={isUpdatingPassword}
                 className="w-full justify-center text-brand-500 hover:bg-brand-50 transition border-brand-500/20"
               >
@@ -314,7 +356,7 @@ export function SettingsPage() {
                   </>
                 )}
               </GhostButton>
-            </div>
+            </form>
           </FormSection>
 
           <FormSection title="Notification Preferences">
@@ -323,22 +365,22 @@ export function SettingsPage() {
                 title="Email Notifications"
                 text="Receive global summary emails"
                 checked={notificationForm.emailNotifications}
-                onToggle={() => toggleNotification("emailNotifications")}
-                disabled={!isEditing}
+                onToggle={() => void toggleNotification("emailNotifications")}
+                disabled={isSavingNotifications || isSavingProfile}
               />
               <NotificationRow
                 title="Order Updates"
                 text="Real-time alerts for escrow changes"
                 checked={notificationForm.orderUpdates}
-                onToggle={() => toggleNotification("orderUpdates")}
-                disabled={!isEditing}
+                onToggle={() => void toggleNotification("orderUpdates")}
+                disabled={isSavingNotifications || isSavingProfile}
               />
               <NotificationRow
                 title="Document Updates"
                 text="Alerts when new documents are signed"
                 checked={notificationForm.documentUpdates}
-                onToggle={() => toggleNotification("documentUpdates")}
-                disabled={!isEditing}
+                onToggle={() => void toggleNotification("documentUpdates")}
+                disabled={isSavingNotifications || isSavingProfile}
               />
             </div>
           </FormSection>
@@ -373,6 +415,7 @@ function SettingsInput({
   onChange,
   type = "text",
   placeholder = "",
+  autoComplete,
   disabled = false,
 }: {
   label: string;
@@ -380,6 +423,7 @@ function SettingsInput({
   onChange: (value: string) => void;
   type?: string;
   placeholder?: string;
+  autoComplete?: string;
   disabled?: boolean;
 }) {
   return (
@@ -390,6 +434,7 @@ function SettingsInput({
         onChange={(event) => onChange(event.target.value)}
         type={type}
         placeholder={placeholder}
+        autoComplete={autoComplete}
         disabled={disabled}
         className="h-12 w-full rounded-xl border border-[#DBE4F3] bg-[#F8FAFF] px-4 text-[14px] text-slate-700 outline-none transition focus:border-brand-500 focus:bg-white focus:ring-1 focus:ring-brand-500/20 disabled:pointer-events-none"
       />

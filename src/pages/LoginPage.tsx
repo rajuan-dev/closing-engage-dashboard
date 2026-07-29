@@ -170,6 +170,7 @@ export function LoginPage({
                       className="w-full border-0 bg-transparent text-[14px] text-slate-800 outline-none placeholder:text-slate-400"
                       placeholder="admin@email.com"
                       type="email"
+                      autoComplete="email"
                       required
                     />
                   </div>
@@ -194,6 +195,7 @@ export function LoginPage({
                       className="w-full border-0 bg-transparent text-[14px] text-slate-800 outline-none placeholder:text-slate-400 pr-10"
                       placeholder="••••••••"
                       type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
                       required
                     />
                     <button
@@ -271,6 +273,7 @@ export function LoginPage({
                       className="w-full border-0 bg-transparent text-[14px] text-slate-800 outline-none placeholder:text-slate-400"
                       placeholder="admin@email.com"
                       type="email"
+                      autoComplete="email"
                       required
                     />
                   </div>
@@ -333,6 +336,8 @@ export function LoginPage({
                       className="w-full border-0 bg-transparent text-[14px] text-slate-800 outline-none placeholder:text-slate-400 tracking-[0.2em] font-semibold"
                       placeholder="000000"
                       type="text"
+                      autoComplete="one-time-code"
+                      inputMode="numeric"
                       required
                     />
                   </div>
@@ -394,6 +399,7 @@ export function LoginPage({
                       className="w-full border-0 bg-transparent text-[14px] text-slate-800 outline-none placeholder:text-slate-400 pr-10"
                       placeholder="••••••••"
                       type={showNewPassword ? "text" : "password"}
+                      autoComplete="new-password"
                       required
                     />
                     <button
@@ -416,6 +422,7 @@ export function LoginPage({
                       className="w-full border-0 bg-transparent text-[14px] text-slate-800 outline-none placeholder:text-slate-400 pr-10"
                       placeholder="••••••••"
                       type={showNewPassword ? "text" : "password"}
+                      autoComplete="new-password"
                       required
                     />
                   </div>

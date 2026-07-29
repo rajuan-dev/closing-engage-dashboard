@@ -100,7 +100,7 @@ export const adminAuth = {
 
     return parseResponse<AdminSession>(response);
   },
-  async updateProfile(profile: AdminProfile): Promise<AdminSession> {
+  async updateProfile(profile: Partial<AdminProfile>): Promise<AdminSession> {
     const token = this.getToken();
 
     if (!token) {
