@@ -1,4 +1,5 @@
 import { Building2, CheckCircle2, ClipboardList, FileCog, UserCog } from "lucide-react";
+import { io, type Socket } from "socket.io-client";
 
 import type { MetricCard } from "../data";
 import { adminAuth } from "./auth";
@@ -15,6 +16,7 @@ export interface NotificationItem {
   time: string;
   read: boolean;
   type: "order" | "document" | "user" | "system";
+  linkId?: string;
 }
 
 export interface QuickActionItem {
@@ -106,12 +108,25 @@ const TREND_LABELS: Record<DashboardOverview["trendPeriod"], string[]> = {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:5000/api/v1";
+const SOCKET_BASE_URL = API_BASE_URL.replace(/\/api\/v\d+$/, "");
 
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
   data: T;
 }
+
+interface NotificationServerToClientEvents {
+  "notifications:new": (payload: NotificationItem) => void;
+  "notifications:read": (payload: { id: string }) => void;
+  "notifications:read-all": () => void;
+  "notifications:deleted": (payload: { id: string }) => void;
+  "notifications:cleared": () => void;
+}
+
+interface NotificationClientToServerEvents {}
+
+export type NotificationSocket = Socket<NotificationServerToClientEvents, NotificationClientToServerEvents>;
 
 const toSafeNumber = (value: unknown): number => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -270,6 +285,16 @@ export async function deleteNotification(id: string): Promise<void> {
 
 export async function clearAllNotifications(): Promise<void> {
   await request<Record<string, never>>("/notifications/clear-all", { method: "DELETE" });
+}
+
+export function createNotificationSocket(): NotificationSocket | null {
+  const token = adminAuth.getToken();
+  if (!token) return null;
+
+  return io(SOCKET_BASE_URL, {
+    auth: { token },
+    transports: ["websocket", "polling"],
+  });
 }
 
 export const toMetricCards = (overview: DashboardOverview): MetricCard[] => [

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MetricCard } from "../data";
 import {
+  createNotificationSocket,
   createFallbackDashboardOverview,
   fetchDashboardOverview,
   fetchNotifications,
@@ -15,6 +16,7 @@ import {
   clearAllNotifications,
   toMetricCards,
   toQuickActions,
+  type NotificationSocket,
 } from "../api/dashboardService";
 
 const DASHBOARD_CACHE_KEY = "dashboard_overview_cache";
@@ -84,6 +86,8 @@ const initialDashboardState: DashboardState = {
 
 let sharedDashboardState: DashboardState = initialDashboardState;
 const dashboardListeners = new Set<(state: DashboardState) => void>();
+let sharedNotificationSocket: NotificationSocket | null = null;
+let sharedNotificationSocketSubscribers = 0;
 
 const updateSharedDashboardState = (
   updater: DashboardState | ((prev: DashboardState) => DashboardState)
@@ -94,6 +98,73 @@ const updateSharedDashboardState = (
   dashboardListeners.forEach((listener) => listener(sharedDashboardState));
 };
 
+const startNotificationRealtime = () => {
+  if (sharedNotificationSocket) {
+    return;
+  }
+
+  const socket = createNotificationSocket();
+  if (!socket) {
+    return;
+  }
+
+  socket.on("notifications:new", (payload) => {
+    updateSharedDashboardState((prev) => {
+      const existingIndex = prev.notifications.findIndex((item) => item.id === payload.id);
+      if (existingIndex === -1) {
+        return {
+          ...prev,
+          notifications: [payload, ...prev.notifications],
+        };
+      }
+
+      const nextNotifications = [...prev.notifications];
+      nextNotifications[existingIndex] = { ...nextNotifications[existingIndex], ...payload };
+      return {
+        ...prev,
+        notifications: nextNotifications,
+      };
+    });
+  });
+
+  socket.on("notifications:read", ({ id }) => {
+    updateSharedDashboardState((prev) => ({
+      ...prev,
+      notifications: prev.notifications.map((item) =>
+        item.id === id ? { ...item, read: true } : item
+      ),
+    }));
+  });
+
+  socket.on("notifications:read-all", () => {
+    updateSharedDashboardState((prev) => ({
+      ...prev,
+      notifications: prev.notifications.map((item) => ({ ...item, read: true })),
+    }));
+  });
+
+  socket.on("notifications:deleted", ({ id }) => {
+    updateSharedDashboardState((prev) => ({
+      ...prev,
+      notifications: prev.notifications.filter((item) => item.id !== id),
+    }));
+  });
+
+  socket.on("notifications:cleared", () => {
+    updateSharedDashboardState((prev) => ({
+      ...prev,
+      notifications: [],
+    }));
+  });
+
+  sharedNotificationSocket = socket;
+};
+
+const stopNotificationRealtime = () => {
+  sharedNotificationSocket?.disconnect();
+  sharedNotificationSocket = null;
+};
+
 export function useDashboardData() {
   const [state, setState] = useState<DashboardState>(sharedDashboardState);
 
@@ -101,45 +172,47 @@ export function useDashboardData() {
 
   useEffect(() => {
     dashboardListeners.add(setState);
+    sharedNotificationSocketSubscribers += 1;
+    startNotificationRealtime();
+
     return () => {
       dashboardListeners.delete(setState);
+      sharedNotificationSocketSubscribers = Math.max(0, sharedNotificationSocketSubscribers - 1);
+      if (sharedNotificationSocketSubscribers === 0) {
+        stopNotificationRealtime();
+      }
     };
   }, []);
 
-  // Fetch all initial data once on mount
-  const fetchAll = useCallback(async () => {
+  const fetchNotificationsSnapshot = useCallback(async () => {
+    try {
+      const items = await fetchNotifications();
+      updateSharedDashboardState((prev) => ({
+        ...prev,
+        notifications: ensureNotificationArray(items),
+      }));
+    } catch {
+      // Keep realtime socket updates working even if the initial notification fetch fails.
+    }
+  }, []);
+
+  const fetchOverview = useCallback(async () => {
     updateSharedDashboardState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const [overviewResult, notificationsResult] = await Promise.allSettled([
-        fetchDashboardOverview(chartPeriod),
-        fetchNotifications(),
-      ]);
-
-      const overview =
-        overviewResult.status === "fulfilled"
-          ? overviewResult.value
-          : createFallbackDashboardOverview(chartPeriod);
+      const overview = await fetchDashboardOverview(chartPeriod);
       const snapshot = buildSnapshotFromOverview(overview);
-
-      if (overviewResult.status === "fulfilled") {
-        persistDashboardOverview(overview);
-      }
+      persistDashboardOverview(overview);
 
       updateSharedDashboardState({
         metrics: ensureMetricArray(snapshot.metrics),
         chartData: ensureChartArray(snapshot.chartData),
         quickActions: ensureQuickActionArray(snapshot.quickActions),
-        notifications: notificationsResult.status === "fulfilled" ? ensureNotificationArray(notificationsResult.value) : [],
+        notifications: sharedDashboardState.notifications,
         isLoading: false,
         isChartLoading: false,
-        error:
-          overviewResult.status === "rejected"
-            ? overviewResult.reason instanceof Error
-              ? overviewResult.reason.message
-              : "Failed to load dashboard data"
-            : null,
+        error: null,
       });
-    } catch {
+    } catch (error) {
       const fallbackSnapshot = buildSnapshotFromOverview(
         readCachedDashboardOverview(chartPeriod) ?? createFallbackDashboardOverview(chartPeriod)
       );
@@ -148,17 +221,21 @@ export function useDashboardData() {
         metrics: ensureMetricArray(fallbackSnapshot.metrics),
         chartData: ensureChartArray(fallbackSnapshot.chartData),
         quickActions: ensureQuickActionArray(fallbackSnapshot.quickActions),
-        notifications: [],
+        notifications: prev.notifications,
         isLoading: false,
         isChartLoading: false,
-        error: "Failed to load dashboard data",
+        error: error instanceof Error ? error.message : "Failed to load dashboard data",
       }));
     }
   }, [chartPeriod]);
 
   useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+    void fetchNotificationsSnapshot();
+  }, [fetchNotificationsSnapshot]);
+
+  useEffect(() => {
+    void fetchOverview();
+  }, [fetchOverview]);
 
   // Fetch chart data specifically when period changes (excluding initial load where fetchAll handles it)
   useEffect(() => {
@@ -255,6 +332,8 @@ export function useDashboardData() {
     markAllRead: handleMarkAllRead,
     removeNotification: handleDeleteNotification,
     clearNotifications: handleClearAllNotifications,
-    refetch: fetchAll,
+    refetch: async () => {
+      await Promise.all([fetchOverview(), fetchNotificationsSnapshot()]);
+    },
   };
 }
