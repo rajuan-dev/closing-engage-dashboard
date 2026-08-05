@@ -561,15 +561,18 @@ export function OrderDetailsPage({
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Order Price</div>
                 <div className="mt-2 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={priceDraft}
-                    onChange={(event) => setPriceDraft(event.target.value)}
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[14px] font-semibold text-slate-800 outline-none focus:border-brand-400"
-                    placeholder="0.00"
-                  />
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-2 text-slate-400 font-bold">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={priceDraft}
+                      onChange={(event) => setPriceDraft(event.target.value)}
+                      className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-7 pr-3 text-[14px] font-semibold text-slate-800 outline-none focus:border-brand-400"
+                      placeholder="0.00"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => void handleSavePrice()}
