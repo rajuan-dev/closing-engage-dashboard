@@ -4,6 +4,7 @@ import { useAppContext } from "../../context/AppContext";
 import { usersApi } from "../../api/users";
 import { firstPasswordVault } from "../../utils/firstPasswordVault";
 import type { NotaryUser } from "../../types";
+import { US_STATE_OPTIONS } from "../../constants/usStates";
 
 // Helper functions to convert date formats between MM/DD/YYYY and YYYY-MM-DD
 const convertToInputDate = (dateStr?: string): string => {
@@ -30,9 +31,11 @@ const convertToDisplayDate = (dateStr?: string): string => {
   }
   return dateStr;
 };
+
 import {
   ModalHeader,
   ModalInput,
+  ModalSelect,
   ModalSectionTitle,
   ModalCheckbox,
   ToggleOptionCard,
@@ -62,6 +65,7 @@ export function AddNotaryModal({
     license: notaryToEdit?.license || prefillData?.license || "",
     expiry: convertToInputDate(notaryToEdit?.expiry || prefillData?.expiry || ""),
     serviceArea: notaryToEdit?.serviceArea || prefillData?.serviceArea || "",
+    state: notaryToEdit?.state || prefillData?.state || "",
     userName: notaryToEdit?.userName || prefillData?.userName || "",
     password: notaryToEdit?.password || prefillData?.password || "",
     sendInvite: notaryToEdit?.sendInvite || prefillData?.sendInvite || false,
@@ -79,6 +83,7 @@ export function AddNotaryModal({
     if (
       !form.fullName ||
       !form.email ||
+      !form.state ||
       !form.userName ||
       (!isEdit && !form.password)
     ) {
@@ -93,6 +98,7 @@ export function AddNotaryModal({
       license: form.license,
       expiry: convertToDisplayDate(form.expiry),
       serviceArea: form.serviceArea,
+      state: form.state,
       userName: form.userName,
       password: form.password,
       sendInvite: form.sendInvite,
@@ -214,6 +220,16 @@ export function AddNotaryModal({
                 value={form.serviceArea}
                 onChange={(value) => updateField("serviceArea", value)}
                 icon={<MapPin size={16} className="text-slate-500" />}
+              />
+            </div>
+            <div className="col-span-2">
+              <ModalSelect
+                label="State"
+                required
+                value={form.state}
+                onChange={(value) => updateField("state", value)}
+                options={US_STATE_OPTIONS}
+                placeholder="Select State"
               />
             </div>
           </div>

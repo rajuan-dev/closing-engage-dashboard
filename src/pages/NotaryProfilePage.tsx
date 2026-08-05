@@ -361,6 +361,7 @@ export function NotaryProfilePage({
               <div>
                 <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-500">Location Base</div>
                 <div className="mt-2 text-[16px] font-semibold text-slate-950">{notary.serviceArea || "Location Not Provided"}</div>
+                <div className="mt-1 text-[13px] font-semibold text-slate-500">State: {notary.state || "Not Provided"}</div>
               </div>
               {notary.publicId ? (
                 <div className="md:col-span-2">

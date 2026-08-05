@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, type ReactNode } from "react";
-import { Check, ShieldCheck, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
+import { Check, ShieldCheck, X, ChevronLeft, ChevronRight, ChevronDown, Search } from "lucide-react";
 import { Switch } from "../common";
 
 export function Modal({
@@ -312,6 +312,145 @@ export function ModalInput({
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export type SelectOptionItem = string | { value: string; label: string; sublabel?: string };
+
+export function ModalSelect({
+  label,
+  value = "",
+  onChange,
+  options,
+  placeholder = "Select...",
+  required = false,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOptionItem[];
+  placeholder?: string;
+  required?: boolean;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const normalizedOptions = useMemo(() => {
+    return options.map((opt) => {
+      if (typeof opt === "string") {
+        return {
+          value: opt === "Select state" || opt.startsWith("Select ") ? "" : opt,
+          label: opt,
+        };
+      }
+      return opt;
+    });
+  }, [options]);
+
+  const selectedOption = useMemo(() => {
+    return (
+      normalizedOptions.find((o) => o.value === value) ||
+      (value ? { value, label: value } : null)
+    );
+  }, [normalizedOptions, value]);
+
+  const filteredOptions = useMemo(() => {
+    if (!searchQuery.trim()) return normalizedOptions;
+    const q = searchQuery.toLowerCase();
+    return normalizedOptions.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(q) ||
+        opt.value.toLowerCase().includes(q) ||
+        (opt.sublabel && opt.sublabel.toLowerCase().includes(q))
+    );
+  }, [normalizedOptions, searchQuery]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const handleSelect = (val: string) => {
+    onChange(val);
+    setIsOpen(false);
+    setSearchQuery("");
+  };
+
+  const isSearchable = normalizedOptions.length > 5;
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <label className="block">
+        <div className="mb-2 text-[13px] font-semibold text-slate-600">
+          {label}
+          {required ? <span className="ml-1 text-rose-500">*</span> : null}
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className={`flex h-11 w-full items-center justify-between rounded-lg border border-[#E1E7F0] bg-[#F5F8FC] px-4 text-left text-[14px] outline-none transition-all hover:border-brand-200 ${
+            isOpen ? "border-brand-400 ring-2 ring-brand-500/10 shadow-sm bg-white" : ""
+          } ${className}`}
+        >
+          <span className={selectedOption && selectedOption.value !== "" ? "font-medium text-slate-800 truncate" : "text-slate-400"}>
+            {selectedOption && selectedOption.value !== "" ? selectedOption.label : placeholder}
+          </span>
+          <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180 text-brand-500" : ""}`} />
+        </button>
+      </label>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-xl border border-[#dfe6f2] bg-white p-1.5 shadow-[0_16px_36px_rgba(20,48,112,0.14)] animate-in fade-in zoom-in-95 duration-150">
+          {isSearchable && (
+            <div className="relative mb-1 p-1">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search state..."
+                className="w-full rounded-lg border border-[#e4ebf5] bg-[#f8fbff] py-1.5 pl-8 pr-3 text-xs text-slate-800 outline-none focus:border-brand-300 focus:bg-white"
+                autoFocus
+              />
+            </div>
+          )}
+          <div className="max-h-52 overflow-y-auto pr-1">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-3 text-center text-xs text-slate-400">No options found</div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <button
+                    key={opt.value + opt.label}
+                    type="button"
+                    onClick={() => handleSelect(opt.value)}
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-[13px] text-left transition-colors ${
+                      isSelected
+                        ? "bg-brand-50 font-bold text-brand-600"
+                        : "text-slate-700 font-medium hover:bg-[#f5f8ff] hover:text-slate-900"
+                    }`}
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {isSelected && <Check className="h-4 w-4 shrink-0 text-brand-500 ml-2" />}
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
       )}

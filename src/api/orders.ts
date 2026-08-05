@@ -45,6 +45,8 @@ export interface OrderDetail {
   location: string;
   date: string;
   time: string;
+  state?: string;
+  price?: number | null;
   status: OrderStatus;
   notaryNotes: string;
   specialInstructions: string;
@@ -123,6 +125,13 @@ export const ordersApi = {
     payload: { notaryName?: string; notaryId?: string; notaryEmail?: string; openForAll?: boolean },
   ): Promise<OrderRow> {
     return request<OrderRow>(`${orderPath(id)}/assign-notary`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateOrder(id: string, payload: Partial<Pick<OrderDetail, "price" | "state">>): Promise<OrderDetail> {
+    return request<OrderDetail>(orderPath(id), {
       method: "PATCH",
       body: JSON.stringify(payload),
     });

@@ -51,6 +51,7 @@ export interface CompanyUser {
   status: "Active" | "Inactive" | "Pending";
   createdDate: string;
   address?: string;
+  state?: string;
   contactEmail?: string;
   userName?: string;
   avatarUrl?: string;
@@ -77,6 +78,7 @@ export interface NotaryUser {
   createdDate: string;
   expiry?: string;
   serviceArea?: string;
+  state?: string;
   userName?: string;
   avatarUrl?: string;
   password?: string;

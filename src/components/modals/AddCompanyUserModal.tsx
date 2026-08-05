@@ -5,10 +5,12 @@ import { usersApi } from "../../api/users";
 import { firstPasswordVault } from "../../utils/firstPasswordVault";
 import { prepareAvatarDataUrl } from "../../utils/avatarImage";
 import type { CompanyUser } from "../../types";
+import { US_STATE_OPTIONS } from "../../constants/usStates";
 import { Avatar } from "../common";
 import {
   ModalHeader,
   ModalInput,
+  ModalSelect,
   ModalSectionTitle,
   ModalCheckbox,
   ToggleOptionCard,
@@ -39,6 +41,7 @@ export function AddCompanyUserModal({
     phone: companyToEdit?.phone || prefillData?.phone || "",
     contactPerson: companyToEdit?.contactPerson || prefillData?.contactPerson || "",
     address: companyToEdit?.address || prefillData?.address || "",
+    state: companyToEdit?.state || prefillData?.state || "",
     contactEmail: companyToEdit?.contactEmail || prefillData?.contactEmail || "",
     userName: companyToEdit?.userName || prefillData?.userName || "",
     password: companyToEdit?.password || prefillData?.password || "",
@@ -81,6 +84,7 @@ export function AddCompanyUserModal({
       !form.companyName ||
       !form.businessEmail ||
       !form.contactPerson ||
+      !form.state ||
       !form.userName ||
       (!isEdit && !form.password)
     ) {
@@ -96,6 +100,7 @@ export function AddCompanyUserModal({
       status: nextStatus,
       verify: form.verify,
       address: form.address,
+      state: form.state,
       contactEmail: form.contactEmail,
       userName: form.userName,
       password: form.password,
@@ -195,6 +200,16 @@ export function AddCompanyUserModal({
               placeholder="Street address, City, State, ZIP"
               value={form.address}
               onChange={(value) => updateField("address", value)}
+            />
+          </div>
+          <div className="col-span-2">
+            <ModalSelect
+              label="State"
+              required
+              value={form.state}
+              onChange={(value) => updateField("state", value)}
+              options={US_STATE_OPTIONS}
+              placeholder="Select State"
             />
           </div>
           <div className="col-span-2">

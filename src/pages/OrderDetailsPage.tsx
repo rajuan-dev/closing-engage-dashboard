@@ -67,6 +67,8 @@ export function OrderDetailsPage({
   const [chatDraft, setChatDraft] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isChatSending, setIsChatSending] = useState(false);
+  const [priceDraft, setPriceDraft] = useState("");
+  const [isSavingPrice, setIsSavingPrice] = useState(false);
   const chatSocketRef = useRef<CommunicationSocket | null>(null);
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
 
@@ -205,6 +207,7 @@ export function OrderDetailsPage({
         setDocuments(allDocuments.filter((document) => document.orderNumber === id));
         setActivityLogs(timeline);
         setOrderDetail(detail);
+        setPriceDraft(typeof detail.price === "number" ? detail.price.toFixed(2) : "");
       } catch (error) {
         if (isMounted) setDocumentError(error instanceof Error ? error.message : "Unable to load order documents.");
       } finally {
@@ -257,6 +260,29 @@ export function OrderDetailsPage({
       ...prev,
     ]);
     showToast("Status Updated", { message: `Order status successfully changed to ${newStatus}.`, variant: "success" });
+  };
+
+  const handleSavePrice = async () => {
+    const price = priceDraft.trim() ? Number(priceDraft) : undefined;
+    if (price !== undefined && (!Number.isFinite(price) || price < 0)) {
+      showToast("Invalid Price", { message: "Enter a valid non-negative order price.", variant: "error" });
+      return;
+    }
+
+    setIsSavingPrice(true);
+    try {
+      const updated = await ordersApi.updateOrder(id, { price });
+      setOrderDetail(updated);
+      setPriceDraft(typeof updated.price === "number" ? updated.price.toFixed(2) : "");
+      showToast("Price Updated", { message: "Order pricing has been saved.", variant: "success" });
+    } catch (error) {
+      showToast("Price Update Failed", {
+        message: error instanceof Error ? error.message : "Unable to save order pricing.",
+        variant: "error",
+      });
+    } finally {
+      setIsSavingPrice(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -531,6 +557,29 @@ export function OrderDetailsPage({
             <div className="grid grid-cols-2 gap-6 p-5">
               <InfoBlock label="Title Company" lines={[company]} strongFirst />
               <InfoBlock label="Signing Date & Time" lines={[date]} strongFirst icons={[Calendar]} />
+              <InfoBlock label="State" lines={[orderDetail?.state || "Not set"]} strongFirst />
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Order Price</div>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={priceDraft}
+                    onChange={(event) => setPriceDraft(event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[14px] font-semibold text-slate-800 outline-none focus:border-brand-400"
+                    placeholder="0.00"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSavePrice()}
+                    disabled={isSavingPrice}
+                    className="h-10 rounded-lg bg-brand-600 px-4 text-[13px] font-semibold text-white transition hover:bg-brand-700 disabled:bg-slate-300"
+                  >
+                    {isSavingPrice ? "Saving" : "Save"}
+                  </button>
+                </div>
+              </div>
               <div className="col-span-2">
                 <InfoBlock label="Property Address" lines={[location]} strongFirst icons={[MapPin]} />
               </div>
