@@ -1,9 +1,23 @@
 import { useEffect, useState } from "react";
-import { Search, X, ShieldCheck, Circle } from "lucide-react";
+import {
+  Search,
+  X,
+  ShieldCheck,
+  Circle,
+  UserCheck,
+  Radio,
+  MapPin,
+  Mail,
+  Phone,
+  Loader2,
+  CheckCircle2,
+  Check,
+} from "lucide-react";
 import { useAppContext } from "../../context/AppContext";
 import { ordersApi } from "../../api/orders";
 import { usersApi } from "../../api/users";
-import { StatusBadge } from "../common";
+import { StatusBadge, Avatar } from "../common";
+import { profileGradients } from "../../data";
 import type { NotaryUser, StatusKey } from "../../types";
 
 export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null; onClose: () => void }) {
@@ -15,10 +29,11 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
   const [error, setError] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignMode, setAssignMode] = useState<"single" | "open">("single");
-  
+
   const order = orders.find((o: any) => o[0] === orderId) || orders[0];
   const orderNum = order ? order[0] : "#ORD-90212";
   const orderLocation = order ? order[4].replace("\n", ", ") : "123 Maple St, Austin, TX";
+  const titleCompany = order && order[2] ? order[2] : "";
 
   useEffect(() => {
     let isMounted = true;
@@ -53,23 +68,24 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
       isMounted = false;
     };
   }, [order, setNotaries]);
-  
+
   const visibleNotaries = availableNotaries
     .filter((notary) => notary.status !== "Inactive")
     .filter((notary) =>
-      `${notary.fullName} ${notary.serviceArea || ""} ${notary.specialty || ""} ${notary.email}`
+      `${notary.fullName} ${notary.serviceArea || ""} ${notary.specialty || ""} ${notary.email} ${notary.phone || ""} ${notary.license || ""}`
         .toLowerCase()
         .includes(query.toLowerCase()),
     );
+
+  const selectedNotary = availableNotaries.find((n) => n.id === selectedNotaryId);
 
   const handleAssign = async () => {
     if (!orderId) {
       onClose();
       return;
     }
-    const selectedNotary = availableNotaries.find((notary) => notary.id === selectedNotaryId);
     if (assignMode === "single" && !selectedNotary) {
-      setError("Select a real notary user account before assigning.");
+      setError("Select a valid notary user account before assigning.");
       return;
     }
 
@@ -96,142 +112,330 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h2 className="text-[24px] font-bold text-slate-900">Assign Notary</h2>
-          <p className="text-[15px] text-slate-500">Select a notary for this order</p>
-        </div>
-        <button onClick={onClose} className="text-slate-500 hover:text-slate-700 transition">
-          <X size={30} strokeWidth={1.5} />
-        </button>
-      </div>
-      <div className="rounded-2xl bg-[#EEF3FA] p-5">
-        <div className="grid grid-cols-[130px_1fr] gap-y-4 text-[16px]">
-          <div className="font-semibold uppercase tracking-[0.08em] text-slate-500">Order ID</div>
-          <div className="text-right font-semibold text-slate-800">{orderNum}</div>
-          <div className="font-semibold uppercase tracking-[0.08em] text-slate-500">Location</div>
-          <div className="text-right font-semibold text-slate-800">{orderLocation}</div>
-        </div>
-      </div>
-      <div className="mt-7">
-        <div className="rounded-2xl border border-[#E5EBF6] bg-white p-4">
-          <div className="flex items-start gap-3">
-            <button
-              type="button"
-              onClick={() => setAssignMode("open")}
-              className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border transition ${
-                assignMode === "open" ? "border-brand-500 bg-brand-500 text-white" : "border-[#CBD5E1] text-transparent"
-              }`}
-            >
-              <Circle size={12} fill="currentColor" />
-            </button>
-            <div className="flex-1">
-              <div className="text-[15px] font-semibold text-slate-900">Open for all notaries</div>
-              <div className="mt-1 text-[13px] leading-5 text-slate-500">
-                Broadcast this order to every active notary. The first notary who accepts will be assigned automatically.
+    <div className="flex flex-col h-full max-h-[85vh] min-h-[540px] bg-white text-slate-800 overflow-hidden rounded-[24px]">
+      <div className="flex-none p-6 pb-4 border-b border-slate-100 bg-white">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                <UserCheck size={18} />
               </div>
+              <h2 className="text-[20px] font-bold text-slate-900 tracking-tight">Assign Notary</h2>
             </div>
+            <p className="mt-1 text-[13px] text-slate-500">
+              Assign a specific notary or broadcast this order to all active signing agents.
+            </p>
           </div>
-          <div className="mt-4 flex items-start gap-3">
-            <button
-              type="button"
-              onClick={() => setAssignMode("single")}
-              className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border transition ${
-                assignMode === "single" ? "border-brand-500 bg-brand-500 text-white" : "border-[#CBD5E1] text-transparent"
-              }`}
-            >
-              <Circle size={12} fill="currentColor" />
-            </button>
-            <div className="flex-1">
-              <div className="text-[15px] font-semibold text-slate-900">Assign a specific notary</div>
-              <div className="mt-1 text-[13px] leading-5 text-slate-500">
-                Pick one notary below when you already know exactly who should handle this file.
-              </div>
-            </div>
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 px-4 text-xs font-medium text-slate-600 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded border border-brand-100 text-[13px]">
+              {orderNum}
+            </span>
+            {titleCompany && (
+              <span className="text-slate-400">
+                • <span className="text-slate-700 font-semibold">{titleCompany}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-slate-600 max-w-[380px] truncate" title={orderLocation}>
+            <MapPin size={14} className="text-slate-400 shrink-0" />
+            <span className="truncate">{orderLocation}</span>
           </div>
         </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setAssignMode("single")}
+            className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
+              assignMode === "single"
+                ? "border-brand-500 bg-brand-50/40 ring-1 ring-brand-500/30 shadow-sm"
+                : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            <div
+              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
+                assignMode === "single" ? "border-brand-500 bg-brand-500 text-white" : "border-slate-300 bg-white"
+              }`}
+            >
+              {assignMode === "single" && <Circle size={7} fill="currentColor" />}
+            </div>
+            <div>
+              <div className="text-[14px] font-semibold text-slate-900">Assign Specific Notary</div>
+              <div className="text-[12px] text-slate-500 mt-0.5 leading-snug">
+                Pick a verified notary agent from database
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAssignMode("open")}
+            className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
+              assignMode === "open"
+                ? "border-brand-500 bg-brand-50/40 ring-1 ring-brand-500/30 shadow-sm"
+                : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            <div
+              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
+                assignMode === "open" ? "border-brand-500 bg-brand-500 text-white" : "border-slate-300 bg-white"
+              }`}
+            >
+              {assignMode === "open" && <Circle size={7} fill="currentColor" />}
+            </div>
+            <div>
+              <div className="text-[14px] font-semibold text-slate-900">Open for All Notaries</div>
+              <div className="text-[12px] text-slate-500 mt-0.5 leading-snug">
+                Broadcast order to all active signing agents
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
-      <div className="mt-5">
-        <label className="flex h-11 items-center gap-3 rounded-xl bg-[#EEF3FA] px-4 text-slate-400">
-          <Search size={16} />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by name or location..."
-            disabled={assignMode === "open"}
-            className="w-full border-0 bg-transparent text-[14px] text-slate-700 outline-none placeholder:text-slate-400"
-          />
-        </label>
-      </div>
-      <div className="mt-8 space-y-10">
+
+      {assignMode === "single" && (
+        <div className="flex-none px-6 py-3 border-b border-slate-100 bg-white flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, location, email, or specialty..."
+              className="w-full h-10 rounded-xl bg-slate-50 border border-slate-200 pl-9 pr-9 text-[13px] text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <span className="text-[12px] font-semibold text-slate-500 whitespace-nowrap bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200/60">
+            {visibleNotaries.length} {visibleNotaries.length === 1 ? "Notary" : "Notaries"}
+          </span>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-slate-50/50">
         {isLoading ? (
-          <div className="rounded-2xl border border-[#E5EBF6] bg-white p-6 text-center text-[15px] font-semibold text-slate-500">
-            Loading real notary accounts...
+          <div className="py-12 text-center">
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-500 animate-spin mb-3">
+              <Loader2 size={20} />
+            </div>
+            <p className="text-[14px] font-medium text-slate-600">Loading active notary accounts...</p>
           </div>
         ) : error ? (
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-[14px] font-semibold text-red-600">
-            {error}
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-[14px] text-red-700 flex items-start gap-3">
+            <span className="font-semibold">Error:</span> {error}
           </div>
         ) : assignMode === "open" ? (
-          <div className="rounded-2xl border border-[#D9E7FF] bg-[#F5F9FF] p-5 text-[14px] font-semibold leading-6 text-brand-600">
-            This order will be sent to every active notary notification inbox. Once one notary accepts it, everyone else will be blocked automatically.
+          <div className="rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50/70 to-blue-50/40 p-6 text-slate-700 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-md shadow-brand-500/30">
+                <Radio size={24} className="animate-pulse" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-[16px] font-bold text-slate-900">Broadcast Order to All Notaries</h3>
+                <p className="mt-1 text-[13px] text-slate-600 leading-relaxed">
+                  When you submit this order in <strong>Open Broadcast Mode</strong>, it will immediately be dispatched to every active registered notary agent on Closing Engage.
+                </p>
+                <ul className="mt-4 space-y-2 text-[13px] text-slate-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-brand-500 shrink-0" />
+                    <span>Automated instant push notification and email broadcast</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-brand-500 shrink-0" />
+                    <span>First qualified notary to accept secures the assignment</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-brand-500 shrink-0" />
+                    <span>Order locks automatically once claimed</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         ) : visibleNotaries.length === 0 ? (
-          <div className="rounded-2xl border border-[#E5EBF6] bg-white p-6 text-center text-[15px] font-semibold text-slate-500">
-            No active notary accounts found.
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
+              <Search size={22} />
+            </div>
+            <h4 className="text-[15px] font-semibold text-slate-800">No notary accounts found</h4>
+            <p className="mt-1 text-[13px] text-slate-500">
+              {query ? `No active notaries matched "${query}". Try searching for something else.` : "No active notary accounts available."}
+            </p>
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-600 hover:text-brand-700"
+              >
+                <X size={14} /> Clear search filter
+              </button>
+            )}
           </div>
-        ) : visibleNotaries.map((notary) => {
-          const isSelected = selectedNotaryId === notary.id;
-          const meta = [notary.serviceArea || "Service area not provided", notary.specialty || "Notary Signing Agent"]
-            .filter(Boolean)
-            .join(" • ");
-          const status = notary.verify ? "Verified" : notary.status;
+        ) : (
+          visibleNotaries.map((notary) => {
+            const isSelected = selectedNotaryId === notary.id;
+            const initials = notary.initials || notary.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+            const avatarGradient = notary.fullName.toLowerCase().includes("sarah") || notary.fullName.toLowerCase().includes("jane")
+              ? profileGradients.jane
+              : notary.fullName.toLowerCase().includes("mark") || notary.fullName.toLowerCase().includes("james")
+              ? profileGradients.mark
+              : profileGradients.alex;
 
-          return (
-            <button
-              key={notary.id}
-              onClick={() => setSelectedNotaryId(notary.id)}
-              className="flex w-full items-center justify-between text-left focus:outline-none"
-            >
-              <div className="flex items-start gap-5">
-                <span
-                  className={`mt-1 flex h-7 w-7 items-center justify-center rounded-full border-2 transition ${
-                    isSelected ? "border-brand-500" : "border-[#D4DAE5]"
-                  }`}
-                >
-                  <span className={`h-3 w-3 rounded-full transition-all ${isSelected ? "bg-brand-500" : "bg-transparent"}`} />
-                </span>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[20px] font-semibold text-slate-800">{notary.fullName}</span>
-                    <StatusBadge status={status as StatusKey} />
+            return (
+              <div
+                key={notary.id}
+                onClick={() => setSelectedNotaryId(notary.id)}
+                className={`group relative rounded-xl border p-4 transition-all duration-150 cursor-pointer flex items-start justify-between gap-4 ${
+                  isSelected
+                    ? "border-brand-500 bg-white shadow-md ring-2 ring-brand-500/20"
+                    : "border-slate-200/90 bg-white hover:border-slate-300 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                  <div className="mt-1 shrink-0">
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full border transition-all ${
+                        isSelected ? "border-brand-500 bg-brand-500 text-white" : "border-slate-300 group-hover:border-slate-400 bg-white"
+                      }`}
+                    >
+                      {isSelected && <Circle size={7} fill="currentColor" />}
+                    </span>
                   </div>
-                  <div className="mt-1 text-[16px] text-slate-500">{meta}</div>
-                  <div className="mt-1 text-[13px] font-medium text-slate-400">{notary.email}</div>
+
+                  <Avatar
+                    className="h-11 w-11 shrink-0 rounded-full text-white font-bold"
+                    gradient={avatarGradient}
+                    src={notary.avatarUrl}
+                    initials={initials}
+                  />
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-2">
+                      <span className="text-[15px] font-bold text-slate-900 group-hover:text-brand-600 transition">
+                        {notary.fullName}
+                      </span>
+                      {notary.verify ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-600 border border-blue-100">
+                          <ShieldCheck size={12} className="text-blue-500" />
+                          Verified Notary
+                        </span>
+                      ) : (
+                        <StatusBadge status={notary.status as StatusKey} />
+                      )}
+                      {notary.license && (
+                        <span className="text-[11px] font-mono text-slate-400">
+                          Lic #{notary.license}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-1 flex items-center gap-2 text-[13px] font-medium text-slate-600 flex-wrap">
+                      <span className="text-slate-800 font-semibold">{notary.specialty || "Mobile Loan Signing Agent"}</span>
+                      {notary.serviceArea && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-500 flex items-center gap-1">
+                            <MapPin size={12} className="text-slate-400 shrink-0" />
+                            {notary.serviceArea}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="mt-1.5 flex items-center gap-4 text-[12px] text-slate-400 flex-wrap">
+                      <span className="flex items-center gap-1 truncate">
+                        <Mail size={12} className="shrink-0 text-slate-400" />
+                        {notary.email}
+                      </span>
+                      {notary.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone size={12} className="shrink-0 text-slate-400" />
+                          {notary.phone}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="shrink-0 pt-0.5">
+                  {isSelected ? (
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-50 text-brand-600 border border-brand-100">
+                      <Check size={16} strokeWidth={2.5} />
+                    </div>
+                  ) : (
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 group-hover:text-slate-400 transition">
+                      <ShieldCheck size={18} />
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="rounded-full p-2 text-brand-500">
-                <ShieldCheck size={18} />
-              </div>
-            </button>
-          );
-        })}
+            );
+          })
+        )}
       </div>
-      <div className="mt-10 grid grid-cols-2 gap-4">
-        <button
-          onClick={handleAssign}
-          disabled={isLoading || isAssigning || (assignMode === "single" && !selectedNotaryId)}
-          className="rounded-xl bg-brand-500 py-4 text-[16px] font-semibold text-white shadow-md hover:bg-brand-600 transition disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isAssigning ? "Saving..." : assignMode === "open" ? "Open for All" : "Assign Notary"}
-        </button>
-        <button
-          onClick={onClose}
-          className="rounded-xl bg-[#E8EDF6] py-4 text-[16px] font-semibold text-slate-600 hover:bg-slate-200 transition"
-        >
-          Cancel
-        </button>
+
+      <div className="flex-none p-4 px-6 border-t border-slate-200/80 bg-slate-50/90 backdrop-blur flex items-center justify-between gap-4">
+        <div className="text-[13px] font-medium text-slate-600 truncate max-w-[280px]">
+          {assignMode === "open" ? (
+            <span className="text-brand-600 font-semibold flex items-center gap-1.5">
+              <Radio size={14} /> Open Broadcast Mode
+            </span>
+          ) : selectedNotary ? (
+            <span>
+              Selected: <strong className="text-slate-900">{selectedNotary.fullName}</strong>
+            </span>
+          ) : (
+            <span className="text-amber-600">Please select a notary to assign</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 px-5 rounded-xl border border-slate-200 bg-white text-[14px] font-semibold text-slate-600 hover:bg-slate-100 transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleAssign}
+            disabled={isLoading || isAssigning || (assignMode === "single" && !selectedNotaryId)}
+            className="h-10 px-6 rounded-xl bg-brand-500 text-[14px] font-semibold text-white shadow-md hover:bg-brand-600 hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isAssigning ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Saving...
+              </>
+            ) : assignMode === "open" ? (
+              <>
+                <Radio size={16} />
+                Broadcast to All
+              </>
+            ) : (
+              <>
+                <UserCheck size={16} />
+                Assign Notary
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
