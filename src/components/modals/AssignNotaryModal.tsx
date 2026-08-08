@@ -28,12 +28,62 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
-  const [assignMode, setAssignMode] = useState<"single" | "open">("single");
-
   const order = orders.find((o: any) => o[0] === orderId) || orders[0];
   const orderNum = order ? order[0] : "#ORD-90212";
   const orderLocation = order ? order[4].replace("\n", ", ") : "123 Maple St, Austin, TX";
   const titleCompany = order && order[2] ? order[2] : "";
+
+  const usStateCodesSet = new Set([
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
+    'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT',
+    'VA', 'WA', 'WV', 'WI', 'WY'
+  ]);
+  const usStateNames: Record<string, string> = {
+    AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+    CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+    HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+    KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+    MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri',
+    MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
+    NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio',
+    OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+    SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
+    VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+  };
+
+  const extractStateCode = (locationStr?: string): string => {
+    if (!locationStr) return '';
+    const segments = locationStr.split(',').map((segment) => segment.trim()).filter(Boolean);
+    for (const segment of segments) {
+      const upper = segment.toUpperCase();
+      if (usStateCodesSet.has(upper)) return upper;
+      if (Object.values(usStateNames).some((name) => name.toUpperCase() === upper)) {
+        const foundEntry = Object.entries(usStateNames).find(([, name]) => name.toUpperCase() === upper);
+        if (foundEntry) return foundEntry[0];
+      }
+    }
+    for (let i = segments.length - 1; i >= 0; i--) {
+      const parts = segments[i].split(/\s+/).map((part) => part.trim().toUpperCase()).filter(Boolean);
+      for (let j = parts.length - 1; j >= 0; j--) {
+        const part = parts[j];
+        if (usStateCodesSet.has(part)) return part;
+      }
+    }
+    return '';
+  };
+
+  const stateCode = extractStateCode(orderLocation);
+  const stateName = usStateNames[stateCode] || stateCode;
+
+  const initialMode: "single" | "open" = order && order[3] === "Open for All" ? "open" : "single";
+  const [assignMode, setAssignMode] = useState<"single" | "open">(initialMode);
+
+  useEffect(() => {
+    if (order) {
+      setAssignMode(order[3] === "Open for All" ? "open" : "single");
+    }
+  }, [orderId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -48,11 +98,9 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
         setNotaries(rows);
         setAvailableNotaries(rows);
 
-        const currentAssignedName = order && order[3] !== "Unassigned" ? order[3] : "";
-        const currentMode = currentAssignedName === "Open for All" ? "open" : "single";
+        const currentAssignedName = order && order[3] !== "Unassigned" && order[3] !== "--" ? order[3] : "";
         const currentAssigned = rows.find((notary) => notary.fullName === currentAssignedName);
         const firstAssignable = rows.find((notary) => notary.status !== "Inactive");
-        setAssignMode(currentMode);
         setSelectedNotaryId(currentAssigned?.id || firstAssignable?.id || "");
       } catch (loadError) {
         if (!isMounted) return;
@@ -195,7 +243,7 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
             <div>
               <div className="text-[14px] font-semibold text-slate-900">Open for All Notaries</div>
               <div className="text-[12px] text-slate-500 mt-0.5 leading-snug">
-                Broadcast order to all active signing agents
+                Broadcast order to active signing agents in {stateName || "matching state"}
               </div>
             </div>
           </button>
@@ -247,18 +295,20 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
                 <Radio size={24} className="animate-pulse" />
               </div>
               <div className="flex-1">
-                <h3 className="text-[16px] font-bold text-slate-900">Broadcast Order to All Notaries</h3>
+                <h3 className="text-[16px] font-bold text-slate-900">
+                  Broadcast Order to {stateName ? `${stateName} Notaries` : "Notaries in Matching State"}
+                </h3>
                 <p className="mt-1 text-[13px] text-slate-600 leading-relaxed">
-                  When you submit this order in <strong>Open Broadcast Mode</strong>, it will immediately be dispatched to every active registered notary agent on Closing Engage.
+                  When you submit this order in <strong>Open Broadcast Mode</strong>, it will immediately be dispatched to every active registered notary agent in {stateName || "the matching state"} on Closing Engage.
                 </p>
                 <ul className="mt-4 space-y-2 text-[13px] text-slate-600">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 size={16} className="text-brand-500 shrink-0" />
-                    <span>Automated instant push notification and email broadcast</span>
+                    <span>Automated instant push notification and email broadcast to {stateName || "matching state"} notaries</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 size={16} className="text-brand-500 shrink-0" />
-                    <span>First qualified notary to accept secures the assignment</span>
+                    <span>First qualified notary in {stateName || "matching state"} to accept secures the assignment</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 size={16} className="text-brand-500 shrink-0" />
@@ -426,7 +476,7 @@ export function AssignNotaryModal({ orderId, onClose }: { orderId: string | null
             ) : assignMode === "open" ? (
               <>
                 <Radio size={16} />
-                Broadcast to All
+                Broadcast to {stateName ? `${stateName} Notaries` : "Matching Notaries"}
               </>
             ) : (
               <>
