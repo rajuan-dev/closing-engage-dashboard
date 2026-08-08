@@ -207,7 +207,12 @@ export function OrderDetailsPage({
         setDocuments(allDocuments.filter((document) => document.orderNumber === id));
         setActivityLogs(timeline);
         setOrderDetail(detail);
-        setPriceDraft(typeof detail.price === "number" ? detail.price.toFixed(2) : "");
+        const formatPrice = (val: unknown): string => {
+          if (val === null || val === undefined || val === "") return "";
+          const num = Number(val);
+          return Number.isFinite(num) ? num.toFixed(2) : "";
+        };
+        setPriceDraft(formatPrice(detail?.price));
       } catch (error) {
         if (isMounted) setDocumentError(error instanceof Error ? error.message : "Unable to load order documents.");
       } finally {
@@ -272,8 +277,14 @@ export function OrderDetailsPage({
     setIsSavingPrice(true);
     try {
       const updated = await ordersApi.updateOrder(id, { price });
-      setOrderDetail(updated);
-      setPriceDraft(typeof updated.price === "number" ? updated.price.toFixed(2) : "");
+      const formatPrice = (val: unknown): string => {
+        if (val === null || val === undefined || val === "") return "";
+        const num = Number(val);
+        return Number.isFinite(num) ? num.toFixed(2) : "";
+      };
+      const savedPrice = formatPrice(updated?.price ?? price);
+      setOrderDetail((prev) => (prev ? { ...prev, ...updated, price: updated?.price ?? price ?? prev.price } : updated));
+      setPriceDraft(savedPrice);
       showToast("Price Updated", { message: "Order pricing has been saved.", variant: "success" });
     } catch (error) {
       showToast("Price Update Failed", {
