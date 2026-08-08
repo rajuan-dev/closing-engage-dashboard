@@ -8,6 +8,11 @@ import { StatusBadge, Pagination, Avatar, SectionCard } from "../common";
 import { profileGradients } from "../../data";
 import type { StatusKey, CompanyUser, NotaryUser } from "../../types";
 
+const isUrgentPriority = (priority?: string) => {
+  const normalized = priority?.trim().toLowerCase();
+  return normalized === "rush" || normalized === "urgent request";
+};
+
 export function CompanyTable({
   onViewCompany,
   onEditCompany,
@@ -291,7 +296,7 @@ export function OrderTable({
           {paginatedRows.map(([id, company, companyInitials, notary, location, date, status, avatar, priority]) => {
             const isUnassigned = avatar === "none" || !notary || notary === "Unassigned";
             const isOpenForAll = notary === "Open for All";
-            const isUrgentOrder = priority === "Rush" || priority === "Urgent Request";
+            const isUrgentOrder = isUrgentPriority(priority);
             const assignedNotary = isUnassigned
               ? undefined
               : notaries.find((entry) => entry.fullName.toLowerCase() === notary.toLowerCase());
