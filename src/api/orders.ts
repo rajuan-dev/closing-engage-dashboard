@@ -47,6 +47,9 @@ export interface OrderDetail {
   time: string;
   state?: string;
   price?: number | null;
+  companyFee?: number | null;
+  notaryFee?: number | null;
+  closingEngageRevenue?: number | null;
   status: OrderStatus;
   notaryNotes: string;
   specialInstructions: string;
@@ -130,7 +133,10 @@ export const ordersApi = {
     });
   },
 
-  updateOrder(id: string, payload: Partial<Pick<OrderDetail, "price" | "state">>): Promise<OrderDetail> {
+  updateOrder(
+    id: string,
+    payload: Partial<Pick<OrderDetail, "price" | "state" | "companyFee" | "notaryFee">>,
+  ): Promise<OrderDetail> {
     return request<OrderDetail>(orderPath(id), {
       method: "PATCH",
       body: JSON.stringify(payload),

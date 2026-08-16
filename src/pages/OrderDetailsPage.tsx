@@ -67,8 +67,9 @@ export function OrderDetailsPage({
   const [chatDraft, setChatDraft] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isChatSending, setIsChatSending] = useState(false);
-  const [priceDraft, setPriceDraft] = useState("");
-  const [isSavingPrice, setIsSavingPrice] = useState(false);
+  const [companyFeeDraft, setCompanyFeeDraft] = useState("");
+  const [notaryFeeDraft, setNotaryFeeDraft] = useState("");
+  const [isSavingFees, setIsSavingFees] = useState(false);
   const chatSocketRef = useRef<CommunicationSocket | null>(null);
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
 
@@ -212,7 +213,8 @@ export function OrderDetailsPage({
           const num = Number(val);
           return Number.isFinite(num) ? num.toFixed(2) : "";
         };
-        setPriceDraft(formatPrice(detail?.price));
+        setCompanyFeeDraft(formatPrice(detail?.companyFee ?? detail?.price));
+        setNotaryFeeDraft(formatPrice(detail?.notaryFee));
       } catch (error) {
         if (isMounted) setDocumentError(error instanceof Error ? error.message : "Unable to load order documents.");
       } finally {
@@ -235,6 +237,23 @@ export function OrderDetailsPage({
     if (status === "Assigned" || status === "In Progress" || status === "Pending Upload") return 1;
     return 0; // Received
   }, [status]);
+
+  // Real-time calculated Closing Engage Revenue based on fee inputs
+  const calculatedRevenue = useMemo(() => {
+    const cFee = companyFeeDraft.trim() !== "" ? Number(companyFeeDraft) : null;
+    const nFee = notaryFeeDraft.trim() !== "" ? Number(notaryFeeDraft) : null;
+
+    if (cFee !== null && nFee !== null && Number.isFinite(cFee) && Number.isFinite(nFee)) {
+      return Number((cFee - nFee).toFixed(2));
+    }
+    if (cFee !== null && Number.isFinite(cFee) && (orderDetail?.notaryFee === null || orderDetail?.notaryFee === undefined)) {
+      return Number(cFee.toFixed(2));
+    }
+    if (typeof orderDetail?.closingEngageRevenue === "number") {
+      return orderDetail.closingEngageRevenue;
+    }
+    return null;
+  }, [companyFeeDraft, notaryFeeDraft, orderDetail]);
 
   if (!activeOrder) {
     return (
@@ -267,32 +286,45 @@ export function OrderDetailsPage({
     showToast("Status Updated", { message: `Order status successfully changed to ${newStatus}.`, variant: "success" });
   };
 
-  const handleSavePrice = async () => {
-    const price = priceDraft.trim() ? Number(priceDraft) : undefined;
-    if (price !== undefined && (!Number.isFinite(price) || price < 0)) {
-      showToast("Invalid Price", { message: "Enter a valid non-negative order price.", variant: "error" });
+  const handleSaveFees = async () => {
+    const companyFee = companyFeeDraft.trim() ? Number(companyFeeDraft) : undefined;
+    const notaryFee = notaryFeeDraft.trim() ? Number(notaryFeeDraft) : undefined;
+
+    if (
+      (companyFee !== undefined && (!Number.isFinite(companyFee) || companyFee < 0)) ||
+      (notaryFee !== undefined && (!Number.isFinite(notaryFee) || notaryFee < 0))
+    ) {
+      showToast("Invalid Fee", { message: "Enter valid non-negative fee amounts.", variant: "error" });
       return;
     }
 
-    setIsSavingPrice(true);
+    setIsSavingFees(true);
     try {
-      const updated = await ordersApi.updateOrder(id, { price });
+      await ordersApi.updateOrder(id, { companyFee, notaryFee });
+      const freshDetail = await ordersApi.getOrderDetail(id);
       const formatPrice = (val: unknown): string => {
         if (val === null || val === undefined || val === "") return "";
         const num = Number(val);
         return Number.isFinite(num) ? num.toFixed(2) : "";
       };
-      const savedPrice = formatPrice(updated?.price ?? price);
-      setOrderDetail((prev) => (prev ? { ...prev, ...updated, price: updated?.price ?? price ?? prev.price } : updated));
-      setPriceDraft(savedPrice);
-      showToast("Price Updated", { message: "Order pricing has been saved.", variant: "success" });
+
+      setOrderDetail(freshDetail);
+      setCompanyFeeDraft(formatPrice(freshDetail.companyFee ?? freshDetail.price));
+      setNotaryFeeDraft(formatPrice(freshDetail.notaryFee));
+
+      const liveOrders = await ordersApi.getOrders().catch(() => null);
+      if (liveOrders) {
+        setOrders(liveOrders);
+      }
+
+      showToast("Fees Updated", { message: "Order fees have been saved.", variant: "success" });
     } catch (error) {
-      showToast("Price Update Failed", {
-        message: error instanceof Error ? error.message : "Unable to save order pricing.",
+      showToast("Fee Update Failed", {
+        message: error instanceof Error ? error.message : "Unable to save order fees.",
         variant: "error",
       });
     } finally {
-      setIsSavingPrice(false);
+      setIsSavingFees(false);
     }
   };
 
@@ -570,27 +602,56 @@ export function OrderDetailsPage({
               <InfoBlock label="Signing Date & Time" lines={[date]} strongFirst icons={[Calendar]} />
               <InfoBlock label="State" lines={[orderDetail?.state || "Not set"]} strongFirst />
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Order Price</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Title Company Fee</div>
+                <div className="mt-2 relative">
+                  <span className="absolute left-3 top-2 text-slate-400 font-bold">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={companyFeeDraft}
+                    onChange={(event) => setCompanyFeeDraft(event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-7 pr-3 text-[14px] font-semibold text-slate-800 outline-none focus:border-brand-400"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Notary Fee</div>
+                <div className="mt-2 relative">
+                  <span className="absolute left-3 top-2 text-slate-400 font-bold">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={notaryFeeDraft}
+                    onChange={(event) => setNotaryFeeDraft(event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-7 pr-3 text-[14px] font-semibold text-slate-800 outline-none focus:border-brand-400"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Closing Engage Revenue</div>
                 <div className="mt-2 flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-2 text-slate-400 font-bold">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={priceDraft}
-                      onChange={(event) => setPriceDraft(event.target.value)}
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-7 pr-3 text-[14px] font-semibold text-slate-800 outline-none focus:border-brand-400"
-                      placeholder="0.00"
-                    />
+                  <div className="h-10 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[14px] font-semibold text-slate-800 flex items-center">
+                    {typeof calculatedRevenue === "number"
+                      ? calculatedRevenue < 0
+                        ? `-$${Math.abs(calculatedRevenue).toFixed(2)}`
+                        : `$${calculatedRevenue.toFixed(2)}`
+                      : "Not set"}
                   </div>
                   <button
                     type="button"
-                    onClick={() => void handleSavePrice()}
-                    disabled={isSavingPrice}
-                    className="h-10 rounded-lg bg-brand-600 px-4 text-[13px] font-semibold text-white transition hover:bg-brand-700 disabled:bg-slate-300"
+                    onClick={() => void handleSaveFees()}
+                    disabled={isSavingFees}
+                    className="h-10 rounded-lg bg-brand-600 px-4 text-[13px] font-semibold text-white transition hover:bg-brand-700 disabled:bg-slate-300 flex items-center justify-center min-w-[70px]"
                   >
-                    {isSavingPrice ? "Saving" : "Save"}
+                    {isSavingFees ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      "Save"
+                    )}
                   </button>
                 </div>
               </div>

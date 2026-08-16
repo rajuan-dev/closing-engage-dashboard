@@ -30,6 +30,7 @@ const mergeMessage = (messages: CommunicationMessage[], next: CommunicationMessa
   messages.some((message) => message.id === next.id) ? messages : [...messages, next];
 
 const displayDate = (value: string) => value.replace("\n", " • ");
+const normalizeOrderNumberKey = (value: string) => value.trim().replace(/^#/, "").toUpperCase();
 const threadActivityLabel = (value?: string) => {
   if (!value) return "";
   const timestamp = new Date(value);
@@ -125,12 +126,16 @@ export function CommunicationsPage({
         setIsLoading(true);
         const [liveOrders, liveThreads] = await Promise.all([ordersApi.getOrders(), communicationsApi.getThreads()]);
         if (!isMounted) return;
+        const liveOrderKeys = new Set(liveOrders.map(([id]) => normalizeOrderNumberKey(id)));
+        const matchedThreads = liveThreads.filter((thread) => liveOrderKeys.has(normalizeOrderNumberKey(thread.orderNumber)));
         setOrders(liveOrders);
-        setThreads(liveThreads);
-        setSelectedOrderId((current) => current || liveThreads[0]?.orderNumber || "");
+        setThreads(matchedThreads);
+        setSelectedOrderId((current) =>
+          current && liveOrderKeys.has(normalizeOrderNumberKey(current)) ? current : matchedThreads[0]?.orderNumber || "",
+        );
 
         const detailPairs = await Promise.all(
-          liveThreads.map(async (thread) => {
+          matchedThreads.map(async (thread) => {
             try {
               const detail = await ordersApi.getOrderDetail(thread.orderNumber);
               return [thread.orderNumber, detail] as const;
