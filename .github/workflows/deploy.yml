@@ -92,6 +92,7 @@ jobs:
           export PROJECT_PATH BRANCH
 
           deploy() {
+            echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] Deploy lock acquired"
             for repo in closing-engage-backend closing-engage-dashboard closing-engage-website; do
               if [ ! -d "$PROJECT_PATH/$repo/.git" ]; then
                 echo "Missing git repo at $PROJECT_PATH/$repo"
@@ -104,7 +105,14 @@ jobs:
             done
 
             cd "$PROJECT_PATH"
-            docker compose up -d --build
+            echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] Starting docker compose build"
+            if ! timeout 3600 docker compose up -d --build; then
+              echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] docker compose up -d --build failed or timed out"
+              docker compose ps || true
+              docker compose logs --tail=200 || true
+              exit 1
+            fi
+            echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] Docker compose finished"
             docker compose ps
           }
 
